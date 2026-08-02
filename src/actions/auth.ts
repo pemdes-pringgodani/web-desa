@@ -14,6 +14,7 @@ const signInSchema = z.object({
   password: z.string().min(1, "Password tidak boleh kosong"),
 });
 
+// Api untuk register new account
 export async function signUp(values: z.infer<typeof signUpSchema>) {
   // 1. Strict server-side validation
   const validation = signUpSchema.safeParse(values);
@@ -45,6 +46,7 @@ export async function signUp(values: z.infer<typeof signUpSchema>) {
   return { success: true, data: data.user };
 }
 
+// Api untuk login
 export async function signIn(values: z.infer<typeof signInSchema>) {
   // 1. Strict server-side validation
   const validation = signInSchema.safeParse(values);
@@ -71,6 +73,8 @@ export async function signIn(values: z.infer<typeof signInSchema>) {
   return { success: true, data: data.user };
 }
 
+
+// api untuk Logout account
 export async function signOut() {
   const supabase = await createClient();
   const { error } = await supabase.auth.signOut();
