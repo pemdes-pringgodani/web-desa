@@ -1,5 +1,5 @@
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
 }
 
 generator client {
@@ -251,6 +251,7 @@ model Umkm {
   address            String            @db.VarChar(256)
   latitude           Decimal?          @db.Decimal(10, 8)
   longitude          Decimal?          @db.Decimal(11, 8)
+  googlePlaceId      String?           @map("google_place_id") @db.VarChar(256)
   openDay            String?           @map("open_day") @db.VarChar(256)
   startTime          DateTime?         @map("start_time") @db.Time
   endTime            DateTime?         @map("end_time") @db.Time

@@ -27,3 +27,16 @@ export async function createClient() {
     }
   );
 }
+
+export function createAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !serviceRoleKey) {
+    throw new Error("Missing Supabase URL or Service Role Key in environment variables.");
+  }
+
+  // Use the standard @supabase/supabase-js client for service role backend tasks
+  const { createClient: createDirectClient } = require("@supabase/supabase-js");
+  return createDirectClient(url, serviceRoleKey);
+}

@@ -3,6 +3,7 @@
 import { createClient } from "../lib/supabase/server";
 import { z } from "zod";
 
+// Validation
 const signUpSchema = z.object({
   email: z.string().email("Format email tidak valid"),
   password: z.string().min(6, "Password minimal harus 6 karakter"),
@@ -13,6 +14,7 @@ const signInSchema = z.object({
   email: z.string().email("Format email tidak valid"),
   password: z.string().min(1, "Password tidak boleh kosong"),
 });
+
 
 // Api untuk register new account
 export async function signUp(values: z.infer<typeof signUpSchema>) {
