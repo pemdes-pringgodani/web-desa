@@ -1,38 +1,22 @@
-import { NextResponse } from "next/server";
+import { MapsService } from "../../../../../modules/maps/maps.service";
+import { ApiResponse } from "../../../../../shared/utils/response";
+import { AppError } from "../../../../../shared/errors/app-error";
 
-export async function POST(request: Request) {
+export async function GET(request: Request) {
   try {
-    const { url } = await request.json();
+    const { searchParams } = new URL(request.url);
+    const query = searchParams.get("query");
 
-    if (!url) {
-      return NextResponse.json(
-        { error: "URL Google Maps wajib diisi" },
-        { status: 400 }
-      );
+    if (!query || !query.trim()) {
+      return ApiResponse.error("Parameter query wajib diisi", 400);
     }
 
-    // Follow redirects to resolve short link to long link.
-    // Mimic desktop browser User-Agent to prevent getting blocked by basic anti-bot headers.
-    const response = await fetch(url, {
-      method: "GET",
-      redirect: "follow",
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      },
-    });
-
-    const finalUrl = response.url;
-
-    return NextResponse.json({
-      success: true,
-      finalUrl,
-    });
+    const location = await MapsService.resolveLocation(query.trim());
+    return ApiResponse.success(location);
   } catch (error: any) {
-    console.error("Resolve Maps URL error:", error);
-    return NextResponse.json(
-      { error: `Gagal memproses URL Google Maps: ${error.message}` },
-      { status: 500 }
-    );
+    if (error instanceof AppError) {
+      return ApiResponse.error(error.message, error.statusCode, error.errors);
+    }
+    return ApiResponse.error("Terjadi kesalahan saat mencari lokasi", 500);
   }
 }

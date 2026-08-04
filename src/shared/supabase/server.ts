@@ -18,9 +18,7 @@ export async function createClient() {
               cookieStore.set(name, value, options)
             );
           } catch {
-            // The `setAll` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
+            // Called from Server Component or API Route
           }
         },
       },
@@ -36,7 +34,6 @@ export function createAdminClient() {
     throw new Error("Missing Supabase URL or Service Role Key in environment variables.");
   }
 
-  // Use the standard @supabase/supabase-js client for service role backend tasks
   const { createClient: createDirectClient } = require("@supabase/supabase-js");
   return createDirectClient(url, serviceRoleKey);
 }

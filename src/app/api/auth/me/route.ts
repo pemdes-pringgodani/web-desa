@@ -1,15 +1,15 @@
-import { PotentialsService } from "../../../../modules/potentials/potentials.service";
+import { AuthService } from "../../../../modules/auth/auth.service";
 import { ApiResponse } from "../../../../shared/utils/response";
 import { AppError } from "../../../../shared/errors/app-error";
 
 export async function GET() {
   try {
-    const potentials = await PotentialsService.getAllPotentials();
-    return ApiResponse.success(potentials);
+    const user = await AuthService.getCurrentUser();
+    return ApiResponse.success(user);
   } catch (error: any) {
     if (error instanceof AppError) {
       return ApiResponse.error(error.message, error.statusCode, error.errors);
     }
-    return ApiResponse.error("Terjadi kesalahan saat mengambil potensi desa", 500);
+    return ApiResponse.error("Gagal mengambil profil pengguna", 500);
   }
 }
