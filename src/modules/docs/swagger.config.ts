@@ -3,7 +3,7 @@ export const openApiSpec = {
   info: {
     title: "Web Desa Serverless Backend API",
     version: "1.0.0",
-    description: "Dokumentasi OpenAPI 3.0 resmi untuk layanan Backend Serverless Web Desa (UMKM, Maps Geospasial, Potensi Desa, Autentikasi, dan Storage).",
+    description: "Dokumentasi OpenAPI 3.0 resmi untuk layanan Backend Serverless Web Desa (UMKM, Maps Geospasial, Potensi Desa, Perangkat Desa, Autentikasi, dan Storage).",
     contact: {
       name: "Tim Pengembang Web Desa",
     },
@@ -17,6 +17,7 @@ export const openApiSpec = {
   tags: [
     { name: "System", description: "Endpoint kesehatan dan status sistem" },
     { name: "Auth", description: "Layanan autentikasi pengguna (Register, Login, Logout, Session Me)" },
+    { name: "Officials", description: "Pengelolaan dan profil perangkat/pemerintah desa" },
     { name: "UMKM", description: "Pengelolaan direktori dan pendaftaran UMKM" },
     { name: "Maps", description: "Data SIG dan lokasi geospasial peta desa" },
     { name: "Potentials", description: "Katalog potensi lokal desa" },
@@ -26,6 +27,7 @@ export const openApiSpec = {
     "/api/health": {
       get: {
         tags: ["System"],
+        operationId: "getHealthStatus",
         summary: "Cek kesehatan API Serverless",
         description: "Mengembalikan status server dan koneksi database Prisma.",
         responses: {
@@ -33,9 +35,84 @@ export const openApiSpec = {
         },
       },
     },
+    "/api/public/officials": {
+      get: {
+        tags: ["Officials"],
+        operationId: "getVillageOfficials",
+        summary: "Daftar Perangkat Desa",
+        description: "Mengambil daftar seluruh pejabat/perangkat desa.",
+        parameters: [
+          {
+            name: "villageProfileId",
+            in: "query",
+            schema: { type: "string" },
+            description: "Filter berdasarkan ID profil desa",
+          },
+          {
+            name: "q",
+            in: "query",
+            schema: { type: "string" },
+            description: "Pencarian nama atau jabatan perangkat desa",
+          },
+        ],
+        responses: {
+          "200": { description: "Daftar perangkat desa berhasil diambil" },
+        },
+      },
+      post: {
+        tags: ["Officials"],
+        operationId: "createVillageOfficial",
+        summary: "Tambah Perangkat Desa Baru",
+        description: "Menambahkan data pejabat/perangkat desa baru.",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["name", "position", "photoUrl"],
+                properties: {
+                  name: { type: "string", example: "Budi Santoso, S.Sos" },
+                  position: { type: "string", example: "Kepala Desa" },
+                  photoUrl: { type: "string", example: "https://example.com/foto-kades.jpg" },
+                  email: { type: "string", example: "kades@desa.id" },
+                  greeting: { type: "string", example: "Selamat datang di website resmi Desa Lestari." },
+                  villageProfileId: { type: "string", example: "1" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "201": { description: "Perangkat desa berhasil ditambahkan" },
+          "400": { description: "Validasi input gagal" },
+        },
+      },
+    },
+    "/api/public/officials/{id}": {
+      get: {
+        tags: ["Officials"],
+        operationId: "getVillageOfficialById",
+        summary: "Detail Perangkat Desa berdasarkan ID",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "ID perangkat desa",
+          },
+        ],
+        responses: {
+          "200": { description: "Detail perangkat desa ditemukan" },
+          "404": { description: "Perangkat desa tidak ditemukan" },
+        },
+      },
+    },
     "/api/auth/register": {
       post: {
         tags: ["Auth"],
+        operationId: "registerUserAccount",
         summary: "Registrasi Akun Pengguna Baru",
         requestBody: {
           required: true,
@@ -62,6 +139,7 @@ export const openApiSpec = {
     "/api/auth/login": {
       post: {
         tags: ["Auth"],
+        operationId: "loginUserAccount",
         summary: "Login Pengguna",
         requestBody: {
           required: true,
@@ -87,6 +165,7 @@ export const openApiSpec = {
     "/api/auth/logout": {
       post: {
         tags: ["Auth"],
+        operationId: "logoutUserSession",
         summary: "Logout / Keluar Sesi",
         responses: {
           "200": { description: "Berhasil keluar dari sesi" },
@@ -96,6 +175,7 @@ export const openApiSpec = {
     "/api/auth/me": {
       get: {
         tags: ["Auth"],
+        operationId: "getCurrentUserProfile",
         summary: "Ambil Profil Pengguna Saat Ini",
         responses: {
           "200": { description: "Profil pengguna ditemukan" },
@@ -106,6 +186,7 @@ export const openApiSpec = {
     "/api/public/umkm/categories": {
       get: {
         tags: ["UMKM"],
+        operationId: "getUmkmCategoriesList",
         summary: "Daftar Kategori UMKM",
         responses: {
           "200": { description: "Daftar kategori berhasil diambil" },
@@ -115,6 +196,7 @@ export const openApiSpec = {
     "/api/public/umkm/register": {
       post: {
         tags: ["UMKM"],
+        operationId: "registerNewUmkm",
         summary: "Pendaftaran UMKM Baru",
         requestBody: {
           required: true,
@@ -154,6 +236,7 @@ export const openApiSpec = {
     "/api/public/umkm/{slug}": {
       get: {
         tags: ["UMKM"],
+        operationId: "getUmkmDetailBySlug",
         summary: "Detail UMKM berdasarkan Slug",
         parameters: [
           {
@@ -173,6 +256,7 @@ export const openApiSpec = {
     "/api/public/maps/categories": {
       get: {
         tags: ["Maps"],
+        operationId: "getMapCategoriesList",
         summary: "Daftar Kategori Peta Geospasial",
         responses: {
           "200": { description: "Daftar kategori peta" },
@@ -182,6 +266,7 @@ export const openApiSpec = {
     "/api/public/maps/locations": {
       get: {
         tags: ["Maps"],
+        operationId: "getMapLocationsList",
         summary: "Daftar Titik Lokasi Peta Desa",
         parameters: [
           {
@@ -205,6 +290,7 @@ export const openApiSpec = {
     "/api/public/maps/location": {
       get: {
         tags: ["Maps"],
+        operationId: "getMapLocationById",
         summary: "Detail Titik Lokasi berdasarkan ID",
         parameters: [
           {
@@ -224,6 +310,7 @@ export const openApiSpec = {
     "/api/public/potentials": {
       get: {
         tags: ["Potentials"],
+        operationId: "getVillagePotentialsList",
         summary: "Daftar Potensi Lokal Desa",
         responses: {
           "200": { description: "Daftar potensi desa" },
@@ -233,6 +320,7 @@ export const openApiSpec = {
     "/api/uploads": {
       post: {
         tags: ["Storage"],
+        operationId: "uploadMediaFile",
         summary: "Upload Gambar ke Storage",
         requestBody: {
           required: true,
