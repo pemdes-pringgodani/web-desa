@@ -1,11 +1,16 @@
-import { UmkmRepository } from "./umkm.repository";
+import { UmkmRepository, FindAllUmkmParams } from "./umkm.repository";
 import { RegisterUmkmDTO, registerUmkmSchema } from "./umkm.schema";
 import { generateCategorySlug, generateUmkmSlug } from "../../shared/utils/slug";
 import { ValidationError, NotFoundError } from "../../shared/errors/app-error";
 
 export class UmkmService {
   static async getCategories() {
-    return UmkmRepository.findAllCategories();
+    const categories = await UmkmRepository.findAllCategories();
+    return { items: categories };
+  }
+
+  static async getAllUmkm(params: FindAllUmkmParams) {
+    return UmkmRepository.findAllPaginated(params);
   }
 
   static async getUmkmBySlug(slug: string) {

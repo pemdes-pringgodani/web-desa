@@ -3,7 +3,7 @@ export const openApiSpec = {
   info: {
     title: "Web Desa Serverless Backend API",
     version: "1.0.0",
-    description: "Dokumentasi OpenAPI 3.0 resmi untuk layanan Backend Serverless Web Desa (UMKM, Maps Geospasial, Potensi Desa, Perangkat Desa, Autentikasi, dan Storage).",
+    description: "Dokumentasi OpenAPI 3.0 resmi untuk layanan Backend Serverless Web Desa (Berita & Artikel, UMKM, Maps Geospasial, Potensi Desa, Profil & Statistik Desa, Banner, Pengaturan, Autentikasi, dan Storage).",
     contact: {
       name: "Tim Pengembang Web Desa",
     },
@@ -15,8 +15,10 @@ export const openApiSpec = {
     },
   ],
   tags: [
-    { name: "System", description: "Endpoint kesehatan dan status sistem" },
+    { name: "System", description: "Endpoint kesehatan, pengaturan website, status sistem, dan banner" },
     { name: "Auth", description: "Layanan autentikasi pengguna (Register, Login, Logout, Session Me)" },
+    { name: "Profile", description: "Profil desa, visi misi, sejarah, perangkat desa, dan statistik publik" },
+    { name: "News", description: "Pengelolaan publikasi berita, artikel, & galeri kegiatan desa" },
     { name: "Officials", description: "Pengelolaan dan profil perangkat/pemerintah desa" },
     { name: "UMKM", description: "Pengelolaan direktori dan pendaftaran UMKM" },
     { name: "Maps", description: "Data SIG dan lokasi geospasial peta desa" },
@@ -32,6 +34,205 @@ export const openApiSpec = {
         description: "Mengembalikan status server dan koneksi database Prisma.",
         responses: {
           "200": { description: "API serverless berjalan dengan normal" },
+        },
+      },
+    },
+    "/api/public/settings": {
+      get: {
+        tags: ["System"],
+        operationId: "getPublicSettings",
+        summary: "Pengaturan Website & Kontak Desa",
+        description: "Mengambil konfigurasi umum situs desa seperti nama website, logo, nomor kontak, email, alamat, dan media sosial.",
+        responses: {
+          "200": { description: "Pengaturan website berhasil diambil" },
+        },
+      },
+    },
+    "/api/public/banner": {
+      get: {
+        tags: ["System"],
+        operationId: "getActiveBanners",
+        summary: "Daftar Banner Aktif (Hero Carousel)",
+        description: "Mengambil daftar slide banner aktif yang bersumber dari berita unggulan, potensi, atau pengaturan desa.",
+        responses: {
+          "200": { description: "Daftar banner aktif berhasil diambil" },
+        },
+      },
+    },
+    "/api/public/profil": {
+      get: {
+        tags: ["Profile"],
+        operationId: "getVillageProfileWithStats",
+        summary: "Profil Desa, Visi, Misi, Sejarah, Perangkat Desa & Statistik",
+        description: "Mengambil profil utuh desa mencakup sambutan Kepala Desa, Visi & Misi, Sejarah Desa, daftar Perangkat Desa, dan statistik desa.",
+        responses: {
+          "200": { description: "Profil dan statistik desa berhasil diambil" },
+        },
+      },
+    },
+    "/api/public/news": {
+      get: {
+        tags: ["News"],
+        operationId: "getAllNewsList",
+        summary: "Daftar Berita & Artikel Publik (Paginated & Filter)",
+        description: "Mengambil daftar berita desa publik yang telah dipublikasikan dengan pagination, pencarian, dan penyaringan.",
+        parameters: [
+          {
+            name: "page",
+            in: "query",
+            schema: { type: "integer", default: 1 },
+            description: "Halaman data",
+          },
+          {
+            name: "limit",
+            in: "query",
+            schema: { type: "integer", default: 6 },
+            description: "Jumlah item per halaman",
+          },
+          {
+            name: "category",
+            in: "query",
+            schema: { type: "string" },
+            description: "Filter berdasarkan ID atau nama/slug kategori berita",
+          },
+          {
+            name: "type",
+            in: "query",
+            schema: { type: "string" },
+            description: "Filter berdasarkan ID atau slug tipe berita (artikel/galeri)",
+          },
+          {
+            name: "search",
+            in: "query",
+            schema: { type: "string" },
+            description: "Kata kunci pencarian judul atau ringkasan berita",
+          },
+          {
+            name: "exclude",
+            in: "query",
+            schema: { type: "string" },
+            description: "ID atau slug berita yang dikecualikan dari hasil",
+          },
+        ],
+        responses: {
+          "200": { description: "Daftar berita berhasil diambil" },
+        },
+      },
+      post: {
+        tags: ["News"],
+        operationId: "createNewPost",
+        summary: "Tambah Publikasi Berita / Artikel / Galeri Baru",
+        description: "Menerbitkan berita baru lengkap dengan blok konten artikel atau galeri foto.",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["title", "newsCategoryId", "newsTypeId", "excerpt"],
+                properties: {
+                  title: { type: "string", example: "Kegiatan Kerja Bakti Warga Desa Lestari" },
+                  newsCategoryId: { type: "string", example: "1" },
+                  newCategoryName: { type: "string", example: "Kegiatan Desa" },
+                  newsTypeId: { type: "string", example: "1" },
+                  newTypeName: { type: "string", example: "Artikel" },
+                  villagePotentialId: { type: "string", example: "1" },
+                  excerpt: { type: "string", example: "Warga desa antusias mengikuti kerja bakti pembersihan saluran irigasi." },
+                  status: { type: "string", example: "PUBLISHED" },
+                  article: {
+                    type: "object",
+                    properties: {
+                      title: { type: "string", example: "Kerja Bakti Irigasi Desa" },
+                      coverUrl: { type: "string", example: "https://example.com/cover-berita.jpg" },
+                      blocks: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            content: { type: "string", example: "Pada hari Minggu warga berkumpul di balai desa..." },
+                            imageUrl: { type: "string", example: "https://example.com/foto-1.jpg" },
+                            sortOrder: { type: "integer", example: 1 },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "201": { description: "Berita berhasil dipublikasikan" },
+          "400": { description: "Validasi input gagal" },
+        },
+      },
+    },
+    "/api/public/news/register": {
+      post: {
+        tags: ["News"],
+        operationId: "registerNewsSubmission",
+        summary: "Pendaftaran Publikasi Berita oleh Warga",
+        description: "Menerima pengajuan pendaftaran berita baru dari warga desa.",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["title", "newsCategoryId", "excerpt"],
+                properties: {
+                  title: { type: "string", example: "Inovasi Pertanian Organik Desa" },
+                  newsCategoryId: { type: "string", example: "1" },
+                  excerpt: { type: "string", example: "Ringkasan tulisan inovasi pertanian organik." },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "201": { description: "Pengajuan berita berhasil disimpan" },
+          "400": { description: "Validasi input gagal" },
+        },
+      },
+    },
+    "/api/public/news/categories": {
+      get: {
+        tags: ["News"],
+        operationId: "getNewsCategoriesList",
+        summary: "Daftar Kategori Berita",
+        responses: {
+          "200": { description: "Daftar kategori berita berhasil diambil" },
+        },
+      },
+    },
+    "/api/public/news/types": {
+      get: {
+        tags: ["News"],
+        operationId: "getNewsTypesList",
+        summary: "Daftar Tipe Berita (Artikel, Galeri, dll)",
+        responses: {
+          "200": { description: "Daftar tipe berita berhasil diambil" },
+        },
+      },
+    },
+    "/api/public/news/{slug}": {
+      get: {
+        tags: ["News"],
+        operationId: "getNewsBySlug",
+        summary: "Detail Berita berdasarkan Slug",
+        parameters: [
+          {
+            name: "slug",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "Slug unik berita",
+          },
+        ],
+        responses: {
+          "200": { description: "Detail berita ditemukan" },
+          "404": { description: "Berita tidak ditemukan" },
         },
       },
     },
@@ -183,6 +384,55 @@ export const openApiSpec = {
         },
       },
     },
+    "/api/public/umkm": {
+      get: {
+        tags: ["UMKM"],
+        operationId: "getUmkmList",
+        summary: "Daftar UMKM Publik (Paginated & Filter)",
+        description: "Mengambil daftar UMKM desa publik dengan pagination, filter kategori, kata kunci pencarian, dan pengecualian ID.",
+        parameters: [
+          {
+            name: "page",
+            in: "query",
+            schema: { type: "integer", default: 1 },
+            description: "Halaman data",
+          },
+          {
+            name: "limit",
+            in: "query",
+            schema: { type: "integer", default: 8 },
+            description: "Jumlah item per halaman",
+          },
+          {
+            name: "category",
+            in: "query",
+            schema: { type: "string" },
+            description: "Filter berdasarkan ID atau slug kategori UMKM",
+          },
+          {
+            name: "search",
+            in: "query",
+            schema: { type: "string" },
+            description: "Kata kunci pencarian nama atau deskripsi UMKM",
+          },
+          {
+            name: "exclude",
+            in: "query",
+            schema: { type: "string" },
+            description: "ID atau slug UMKM yang dikecualikan dari hasil",
+          },
+          {
+            name: "status",
+            in: "query",
+            schema: { type: "string" },
+            description: "Filter status UMKM",
+          },
+        ],
+        responses: {
+          "200": { description: "Daftar UMKM berhasil diambil" },
+        },
+      },
+    },
     "/api/public/umkm/categories": {
       get: {
         tags: ["UMKM"],
@@ -314,6 +564,26 @@ export const openApiSpec = {
         summary: "Daftar Potensi Lokal Desa",
         responses: {
           "200": { description: "Daftar potensi desa" },
+        },
+      },
+    },
+    "/api/public/potentials/{slug}": {
+      get: {
+        tags: ["Potentials"],
+        operationId: "getPotentialDetailBySlug",
+        summary: "Detail Potensi Desa berdasarkan Slug",
+        parameters: [
+          {
+            name: "slug",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "Slug unik potensi desa",
+          },
+        ],
+        responses: {
+          "200": { description: "Detail potensi desa ditemukan" },
+          "404": { description: "Potensi desa tidak ditemukan" },
         },
       },
     },

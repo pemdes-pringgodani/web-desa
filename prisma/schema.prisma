@@ -27,6 +27,7 @@ model ArticleDetail {
 model ArticleBlock {
   id              BigInt        @id @default(autoincrement())
   articleDetailId BigInt        @map("article_detail_id")
+  subHeading      String?       @map("sub_heading") @db.VarChar(256)
   content         String        @db.Text
   imageUrl        String?       @map("image_url") @db.VarChar(256)
   sortOrder       Int           @map("sort_order")
@@ -121,6 +122,7 @@ model MapLocation {
   address          String?     @db.VarChar(256)
   latitude         Decimal     @db.Decimal(10, 8)
   longitude        Decimal     @db.Decimal(11, 8)
+  googleMapsUrl    String?     @map("google_maps_url") @db.VarChar(512)
 
   category         MapCategory @relation(fields: [mapCategoryId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "map_category_fk")
 
