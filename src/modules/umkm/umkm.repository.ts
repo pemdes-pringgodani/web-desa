@@ -93,11 +93,15 @@ export class UmkmRepository {
       name: u.name,
       slug: u.slug,
       category: u.category?.name || "UMKM",
+      categoryName: u.category?.name || "UMKM",
       description: u.description,
       logo: u.coverUrl || "/images/placeholder-umkm.jpg",
+      coverUrl: u.coverUrl || "/images/placeholder-umkm.jpg",
+      phone: u.phone,
       whatsappNumber: u.phone,
       address: u.address,
       ownerName: u.ownerName,
+      status: u.status,
       publishedAt: new Date().toISOString(),
     }));
 

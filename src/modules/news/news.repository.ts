@@ -86,7 +86,7 @@ export class NewsRepository {
     type,
     search,
     exclude,
-    status = "PUBLISHED",
+    status,
   }: FindAllNewsParams = {}) {
     const where: any = {};
 
@@ -170,7 +170,10 @@ export class NewsRepository {
     ]);
 
     const items = rawNews.map((n) => {
-      const cover = n.articleDetails[0]?.coverUrl || n.galleryDetails[0]?.coverUrl || "/images/placeholder-news.jpg";
+      const cover =
+        n.articleDetails[0]?.coverUrl ||
+        n.galleryDetails[0]?.coverUrl ||
+        "/images/placeholder-news.jpg";
       const catName = n.category?.name || "Umum";
       const catSlug = catName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
@@ -178,12 +181,17 @@ export class NewsRepository {
         id: n.id.toString(),
         title: n.title,
         slug: n.slug,
+        excerpt: n.excerpt,
         summary: n.excerpt,
+        coverUrl: cover,
         coverImage: cover,
         categoryName: catName,
         categorySlug: catSlug,
         authorName: "Humas Desa Pringgodani",
-        publishedAt: n.publishedAt ? n.publishedAt.toISOString() : new Date().toISOString(),
+        publishedAt: n.publishedAt
+          ? n.publishedAt.toISOString()
+          : new Date().toISOString(),
+        status: n.status,
       };
     });
 
@@ -323,7 +331,9 @@ export class NewsRepository {
       id: n.id.toString(),
       title: n.title,
       slug: n.slug,
+      excerpt: n.excerpt,
       summary: n.excerpt,
+      coverUrl: cover,
       coverImage: cover,
       coverCaption: n.title,
       categoryId: n.newsCategoryId.toString(),

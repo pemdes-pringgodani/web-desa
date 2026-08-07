@@ -52,7 +52,7 @@ export class MapsRepository {
       ];
     }
 
-    return prisma.mapLocation.findMany({
+    const locations = await prisma.mapLocation.findMany({
       where,
       include: {
         category: {
@@ -69,6 +69,29 @@ export class MapsRepository {
         name: "asc",
       },
     });
+
+    return locations.map((loc) => ({
+      id: loc.id.toString(),
+      name: loc.name,
+      mapCategoryId: loc.mapCategoryId.toString(),
+      categoryId: loc.mapCategoryId.toString(),
+      categoryName: loc.category?.name || "Fasilitas Publik",
+      shortDescription: loc.shortDescription || "",
+      address: loc.address || "",
+      latitude: Number(loc.latitude),
+      longitude: Number(loc.longitude),
+      googleMapsUrl: loc.googleMapsUrl || undefined,
+      imageUrl: loc.imageUrl || undefined,
+      category: loc.category
+        ? {
+            id: loc.category.id.toString(),
+            name: loc.category.name,
+            slug: loc.category.slug,
+            icon: loc.category.icon,
+            color: loc.category.color,
+          }
+        : undefined,
+    }));
   }
 
   static async findLocationById(id: bigint) {

@@ -24,12 +24,12 @@ export class AdminProfilRepository {
       return {
         headName: "Ki Suryo Pringgo",
         headPosition: "Kepala Desa Pringgodani",
-        headPhoto: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=800&q=80",
+        headPhoto: "https://pringgondaniblog.wordpress.com/wp-content/uploads/2017/07/dsc_0607.jpg",
         headGreeting: "Selamat datang di website resmi Desa Pringgodani.",
         historyText: "Desa Pringgodani berdiri sejak masa kolonial...",
         vision: "Mewujudkan Desa Pringgodani yang mandiri, maju, dan sejahtera.",
         missions: ["Meningkatkan kualitas pelayanan publik berbasis digital", "Mendorong UMKM desa"],
-        structureImageUrl: "https://images.unsplash.com/photo-1542744801-43245f175232?auto=format&fit=crop&w=1200&q=80",
+        structureImageUrl: "https://pringgondaniblog.wordpress.com/wp-content/uploads/2017/07/j.png",
         officials: [],
       };
     }
@@ -39,7 +39,7 @@ export class AdminProfilRepository {
     return {
       headName: firstOfficial?.name || "Ki Suryo Pringgo",
       headPosition: firstOfficial?.position || "Kepala Desa",
-      headPhoto: firstOfficial?.photoUrl || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=800&q=80",
+      headPhoto: firstOfficial?.photoUrl || "https://pringgondaniblog.wordpress.com/wp-content/uploads/2017/07/dsc_0607.jpg",
       headGreeting: firstOfficial?.greeting || "Selamat datang di website resmi Desa Pringgodani.",
       historyText: profile.histories[0]?.details[0]?.content || "Desa Pringgodani berdiri sejak masa kolonial...",
       vision: profile.vision?.vision || "Mewujudkan Desa Pringgodani yang mandiri, maju, dan sejahtera.",
