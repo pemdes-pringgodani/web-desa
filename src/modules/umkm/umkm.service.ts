@@ -21,6 +21,16 @@ export class UmkmService {
     return umkm;
   }
 
+  static async deleteUmkm(idStr: string) {
+    let id: bigint;
+    try {
+      id = BigInt(idStr);
+    } catch {
+      throw new NotFoundError("ID UMKM tidak valid");
+    }
+    return UmkmRepository.deleteUmkm(id);
+  }
+
   static async registerUmkm(input: unknown) {
     // 1. Validate payload
     const validation = registerUmkmSchema.safeParse(input);

@@ -10,6 +10,8 @@ export function serializeBigInt<T>(data: T): any {
 
 export class ApiResponse {
   static success<T>(data: T, message?: string, statusCode: number = 200) {
+    const time = new Date().toLocaleTimeString("id-ID");
+    console.log(`[${time}] ✅ Response ${statusCode}: ${message || "Success"}`);
     const payload = serializeBigInt({
       success: true,
       ...(message ? { message } : {}),
@@ -19,6 +21,8 @@ export class ApiResponse {
   }
 
   static error(message: string, statusCode: number = 500, errors?: any) {
+    const time = new Date().toLocaleTimeString("id-ID");
+    console.error(`[${time}] ❌ Response Error ${statusCode}: ${message}`, errors ? JSON.stringify(errors) : "");
     const payload = {
       success: false,
       error: message,

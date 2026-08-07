@@ -3,7 +3,7 @@ export const openApiSpec = {
   info: {
     title: "Web Desa Serverless Backend API",
     version: "1.0.0",
-    description: "Dokumentasi OpenAPI 3.0 resmi untuk layanan Backend Serverless Web Desa (Berita & Artikel, UMKM, Maps Geospasial, Potensi Desa, Profil & Statistik Desa, Banner, Pengaturan, Autentikasi, dan Storage).",
+    description: "Dokumentasi OpenAPI 3.0 resmi untuk layanan Backend Serverless Web Desa (Berita & Artikel, UMKM, Maps Geospasial, Potensi Desa, Profil & Statistik Desa, Banner, Admin Panel & Submissions, Pengaturan, Autentikasi, dan Storage).",
     contact: {
       name: "Tim Pengembang Web Desa",
     },
@@ -17,6 +17,7 @@ export const openApiSpec = {
   tags: [
     { name: "System", description: "Endpoint kesehatan, pengaturan website, status sistem, dan banner" },
     { name: "Auth", description: "Layanan autentikasi pengguna (Register, Login, Logout, Session Me)" },
+    { name: "Admin", description: "Layanan manajemen admin (Persetujuan Berita & UMKM, CRUD Peta Geospasial, CRUD Berita/UMKM, & Settings)" },
     { name: "Profile", description: "Profil desa, visi misi, sejarah, perangkat desa, dan statistik publik" },
     { name: "News", description: "Pengelolaan publikasi berita, artikel, & galeri kegiatan desa" },
     { name: "Officials", description: "Pengelolaan dan profil perangkat/pemerintah desa" },
@@ -70,6 +71,332 @@ export const openApiSpec = {
         },
       },
     },
+    "/api/admin/submissions": {
+      get: {
+        tags: ["Admin"],
+        operationId: "getAdminPendingSubmissions",
+        summary: "Daftar Antrean Pengajuan Warga (Berita & UMKM PENDING)",
+        description: "Mengambil seluruh antrean pendaftaran berita dan UMKM dari warga yang berstatus PENDING untuk ditinjau admin.",
+        responses: {
+          "200": { description: "Daftar pengajuan PENDING berhasil diambil" },
+        },
+      },
+    },
+    "/api/admin/news/{id}/status": {
+      patch: {
+        tags: ["Admin"],
+        operationId: "updateAdminNewsStatus",
+        summary: "Persetujuan / Perubahan Status Berita (Approve/Reject)",
+        description: "Mengubah status berita warga menjadi PUBLISHED atau REJECTED.",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "ID berita",
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["status"],
+                properties: {
+                  status: { type: "string", example: "PUBLISHED", enum: ["PUBLISHED", "REJECTED", "DRAFT", "PENDING"] },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": { description: "Status berita berhasil diperbarui" },
+        },
+      },
+    },
+    "/api/admin/umkm/{id}/status": {
+      patch: {
+        tags: ["Admin"],
+        operationId: "updateAdminUmkmStatus",
+        summary: "Persetujuan / Perubahan Status UMKM (Approve/Reject)",
+        description: "Mengubah status UMKM warga menjadi APPROVED atau REJECTED.",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "ID UMKM",
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["status"],
+                properties: {
+                  status: { type: "string", example: "APPROVED", enum: ["APPROVED", "REJECTED", "PENDING"] },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": { description: "Status UMKM berhasil diperbarui" },
+        },
+      },
+    },
+    "/api/admin/maps/locations": {
+      get: {
+        tags: ["Admin"],
+        operationId: "getAdminMapLocations",
+        summary: "Daftar Seluruh Titik Lokasi Peta (Admin)",
+        responses: {
+          "200": { description: "Daftar lokasi peta berhasil diambil" },
+        },
+      },
+      post: {
+        tags: ["Admin"],
+        operationId: "createAdminMapLocation",
+        summary: "Tambah Titik Lokasi Peta Baru (Admin)",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["name", "mapCategoryId", "latitude", "longitude"],
+                properties: {
+                  name: { type: "string", example: "Balai Desa Pringgodani" },
+                  mapCategoryId: { type: "string", example: "1" },
+                  shortDescription: { type: "string", example: "Pusat pelayanan masyarakat desa." },
+                  address: { type: "string", example: "Jl. Utama Desa No. 1" },
+                  latitude: { type: "number", example: -7.981234 },
+                  longitude: { type: "number", example: 112.631234 },
+                  imageUrl: { type: "string", example: "https://example.com/balai-desa.jpg" },
+                  googleMapsUrl: { type: "string", example: "https://maps.google.com/?q=-7.981234,112.631234" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "201": { description: "Titik lokasi peta berhasil ditambahkan" },
+        },
+      },
+    },
+    "/api/admin/maps/locations/{id}": {
+      put: {
+        tags: ["Admin"],
+        operationId: "updateAdminMapLocation",
+        summary: "Edit Titik Lokasi & Koordinat Peta",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "ID titik lokasi peta",
+          },
+        ],
+        responses: {
+          "200": { description: "Titik lokasi peta diperbarui" },
+        },
+      },
+      delete: {
+        tags: ["Admin"],
+        operationId: "deleteAdminMapLocation",
+        summary: "Hapus Titik Lokasi Peta",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "ID titik lokasi peta",
+          },
+        ],
+        responses: {
+          "200": { description: "Titik lokasi peta terhapus" },
+        },
+      },
+    },
+    "/api/admin/maps/categories": {
+      get: {
+        tags: ["Admin"],
+        operationId: "getAdminMapCategories",
+        summary: "Daftar Kategori Peta Geospasial (Admin)",
+        responses: {
+          "200": { description: "Daftar kategori peta" },
+        },
+      },
+      post: {
+        tags: ["Admin"],
+        operationId: "createAdminMapCategory",
+        summary: "Tambah Kategori Peta Baru",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["name"],
+                properties: {
+                  name: { type: "string", example: "Fasilitas Umum" },
+                  slug: { type: "string", example: "fasilitas-umum" },
+                  icon: { type: "string", example: "building" },
+                  color: { type: "string", example: "#10B981" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "201": { description: "Kategori peta berhasil dibuat" },
+        },
+      },
+    },
+    "/api/admin/maps/categories/{id}": {
+      put: {
+        tags: ["Admin"],
+        operationId: "updateAdminMapCategory",
+        summary: "Edit Kategori Peta",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
+        responses: {
+          "200": { description: "Kategori peta diperbarui" },
+        },
+      },
+      delete: {
+        tags: ["Admin"],
+        operationId: "deleteAdminMapCategory",
+        summary: "Hapus Kategori Peta",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
+        responses: {
+          "200": { description: "Kategori peta terhapus" },
+        },
+      },
+    },
+    "/api/admin/news": {
+      get: {
+        tags: ["Admin"],
+        operationId: "getAdminNewsList",
+        summary: "Daftar Berita Seluruh Status (Admin)",
+        responses: {
+          "200": { description: "Daftar berita admin berhasil diambil" },
+        },
+      },
+      post: {
+        tags: ["Admin"],
+        operationId: "createAdminNews",
+        summary: "Tambah & Terbitkan Berita Baru oleh Admin",
+        responses: {
+          "201": { description: "Berita berhasil diterbitkan" },
+        },
+      },
+    },
+    "/api/admin/news/{id}": {
+      delete: {
+        tags: ["Admin"],
+        operationId: "deleteAdminNews",
+        summary: "Hapus Berita (Admin)",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
+        responses: {
+          "200": { description: "Berita berhasil dihapus" },
+        },
+      },
+    },
+    "/api/admin/umkm": {
+      get: {
+        tags: ["Admin"],
+        operationId: "getAdminUmkmList",
+        summary: "Daftar UMKM Seluruh Status (Admin)",
+        responses: {
+          "200": { description: "Daftar UMKM admin berhasil diambil" },
+        },
+      },
+      post: {
+        tags: ["Admin"],
+        operationId: "createAdminUmkm",
+        summary: "Tambah UMKM Baru oleh Admin",
+        responses: {
+          "201": { description: "UMKM berhasil ditambahkan" },
+        },
+      },
+    },
+    "/api/admin/umkm/{id}": {
+      delete: {
+        tags: ["Admin"],
+        operationId: "deleteAdminUmkm",
+        summary: "Hapus Data UMKM (Admin)",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
+        responses: {
+          "200": { description: "UMKM berhasil dihapus" },
+        },
+      },
+    },
+    "/api/admin/settings": {
+      put: {
+        tags: ["Admin"],
+        operationId: "updateAdminSettings",
+        summary: "Memperbarui Pengaturan Website & Kontak Desa",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  websiteName: { type: "string", example: "Desa Pringgodani" },
+                  logoUrl: { type: "string", example: "/logo.png" },
+                  email: { type: "string", example: "info@pringgodani.desa.id" },
+                  phone: { type: "string", example: "081234567890" },
+                  address: { type: "string", example: "Jl. Raya Desa Pringgodani No. 1" },
+                  facebook: { type: "string" },
+                  instagram: { type: "string" },
+                  youtube: { type: "string" },
+                  tiktok: { type: "string" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": { description: "Pengaturan website berhasil diperbarui" },
+        },
+      },
+    },
     "/api/public/news": {
       get: {
         tags: ["News"],
@@ -81,37 +408,31 @@ export const openApiSpec = {
             name: "page",
             in: "query",
             schema: { type: "integer", default: 1 },
-            description: "Halaman data",
           },
           {
             name: "limit",
             in: "query",
             schema: { type: "integer", default: 6 },
-            description: "Jumlah item per halaman",
           },
           {
             name: "category",
             in: "query",
             schema: { type: "string" },
-            description: "Filter berdasarkan ID atau nama/slug kategori berita",
           },
           {
             name: "type",
             in: "query",
             schema: { type: "string" },
-            description: "Filter berdasarkan ID atau slug tipe berita (artikel/galeri)",
           },
           {
             name: "search",
             in: "query",
             schema: { type: "string" },
-            description: "Kata kunci pencarian judul atau ringkasan berita",
           },
           {
             name: "exclude",
             in: "query",
             schema: { type: "string" },
-            description: "ID atau slug berita yang dikecualikan dari hasil",
           },
         ],
         responses: {
@@ -122,49 +443,8 @@ export const openApiSpec = {
         tags: ["News"],
         operationId: "createNewPost",
         summary: "Tambah Publikasi Berita / Artikel / Galeri Baru",
-        description: "Menerbitkan berita baru lengkap dengan blok konten artikel atau galeri foto.",
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                required: ["title", "newsCategoryId", "newsTypeId", "excerpt"],
-                properties: {
-                  title: { type: "string", example: "Kegiatan Kerja Bakti Warga Desa Lestari" },
-                  newsCategoryId: { type: "string", example: "1" },
-                  newCategoryName: { type: "string", example: "Kegiatan Desa" },
-                  newsTypeId: { type: "string", example: "1" },
-                  newTypeName: { type: "string", example: "Artikel" },
-                  villagePotentialId: { type: "string", example: "1" },
-                  excerpt: { type: "string", example: "Warga desa antusias mengikuti kerja bakti pembersihan saluran irigasi." },
-                  status: { type: "string", example: "PUBLISHED" },
-                  article: {
-                    type: "object",
-                    properties: {
-                      title: { type: "string", example: "Kerja Bakti Irigasi Desa" },
-                      coverUrl: { type: "string", example: "https://example.com/cover-berita.jpg" },
-                      blocks: {
-                        type: "array",
-                        items: {
-                          type: "object",
-                          properties: {
-                            content: { type: "string", example: "Pada hari Minggu warga berkumpul di balai desa..." },
-                            imageUrl: { type: "string", example: "https://example.com/foto-1.jpg" },
-                            sortOrder: { type: "integer", example: 1 },
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
         responses: {
           "201": { description: "Berita berhasil dipublikasikan" },
-          "400": { description: "Validasi input gagal" },
         },
       },
     },
@@ -173,26 +453,8 @@ export const openApiSpec = {
         tags: ["News"],
         operationId: "registerNewsSubmission",
         summary: "Pendaftaran Publikasi Berita oleh Warga",
-        description: "Menerima pengajuan pendaftaran berita baru dari warga desa.",
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                required: ["title", "newsCategoryId", "excerpt"],
-                properties: {
-                  title: { type: "string", example: "Inovasi Pertanian Organik Desa" },
-                  newsCategoryId: { type: "string", example: "1" },
-                  excerpt: { type: "string", example: "Ringkasan tulisan inovasi pertanian organik." },
-                },
-              },
-            },
-          },
-        },
         responses: {
           "201": { description: "Pengajuan berita berhasil disimpan" },
-          "400": { description: "Validasi input gagal" },
         },
       },
     },
@@ -227,7 +489,6 @@ export const openApiSpec = {
             in: "path",
             required: true,
             schema: { type: "string" },
-            description: "Slug unik berita",
           },
         ],
         responses: {
@@ -241,72 +502,8 @@ export const openApiSpec = {
         tags: ["Officials"],
         operationId: "getVillageOfficials",
         summary: "Daftar Perangkat Desa",
-        description: "Mengambil daftar seluruh pejabat/perangkat desa.",
-        parameters: [
-          {
-            name: "villageProfileId",
-            in: "query",
-            schema: { type: "string" },
-            description: "Filter berdasarkan ID profil desa",
-          },
-          {
-            name: "q",
-            in: "query",
-            schema: { type: "string" },
-            description: "Pencarian nama atau jabatan perangkat desa",
-          },
-        ],
         responses: {
           "200": { description: "Daftar perangkat desa berhasil diambil" },
-        },
-      },
-      post: {
-        tags: ["Officials"],
-        operationId: "createVillageOfficial",
-        summary: "Tambah Perangkat Desa Baru",
-        description: "Menambahkan data pejabat/perangkat desa baru.",
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                required: ["name", "position", "photoUrl"],
-                properties: {
-                  name: { type: "string", example: "Budi Santoso, S.Sos" },
-                  position: { type: "string", example: "Kepala Desa" },
-                  photoUrl: { type: "string", example: "https://example.com/foto-kades.jpg" },
-                  email: { type: "string", example: "kades@desa.id" },
-                  greeting: { type: "string", example: "Selamat datang di website resmi Desa Lestari." },
-                  villageProfileId: { type: "string", example: "1" },
-                },
-              },
-            },
-          },
-        },
-        responses: {
-          "201": { description: "Perangkat desa berhasil ditambahkan" },
-          "400": { description: "Validasi input gagal" },
-        },
-      },
-    },
-    "/api/public/officials/{id}": {
-      get: {
-        tags: ["Officials"],
-        operationId: "getVillageOfficialById",
-        summary: "Detail Perangkat Desa berdasarkan ID",
-        parameters: [
-          {
-            name: "id",
-            in: "path",
-            required: true,
-            schema: { type: "string" },
-            description: "ID perangkat desa",
-          },
-        ],
-        responses: {
-          "200": { description: "Detail perangkat desa ditemukan" },
-          "404": { description: "Perangkat desa tidak ditemukan" },
         },
       },
     },
@@ -315,25 +512,8 @@ export const openApiSpec = {
         tags: ["Auth"],
         operationId: "registerUserAccount",
         summary: "Registrasi Akun Pengguna Baru",
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                required: ["email", "password", "name"],
-                properties: {
-                  email: { type: "string", example: "user@example.com" },
-                  password: { type: "string", example: "password123" },
-                  name: { type: "string", example: "Warga Desa" },
-                },
-              },
-            },
-          },
-        },
         responses: {
           "201": { description: "Akun pengguna berhasil dibuat" },
-          "400": { description: "Validasi atau pendaftaran gagal" },
         },
       },
     },
@@ -342,24 +522,8 @@ export const openApiSpec = {
         tags: ["Auth"],
         operationId: "loginUserAccount",
         summary: "Login Pengguna",
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                required: ["email", "password"],
-                properties: {
-                  email: { type: "string", example: "user@example.com" },
-                  password: { type: "string", example: "password123" },
-                },
-              },
-            },
-          },
-        },
         responses: {
           "200": { description: "Login berhasil" },
-          "400": { description: "Kredensial tidak valid" },
         },
       },
     },
@@ -380,7 +544,6 @@ export const openApiSpec = {
         summary: "Ambil Profil Pengguna Saat Ini",
         responses: {
           "200": { description: "Profil pengguna ditemukan" },
-          "401": { description: "Pengguna belum terautentikasi" },
         },
       },
     },
@@ -389,45 +552,6 @@ export const openApiSpec = {
         tags: ["UMKM"],
         operationId: "getUmkmList",
         summary: "Daftar UMKM Publik (Paginated & Filter)",
-        description: "Mengambil daftar UMKM desa publik dengan pagination, filter kategori, kata kunci pencarian, dan pengecualian ID.",
-        parameters: [
-          {
-            name: "page",
-            in: "query",
-            schema: { type: "integer", default: 1 },
-            description: "Halaman data",
-          },
-          {
-            name: "limit",
-            in: "query",
-            schema: { type: "integer", default: 8 },
-            description: "Jumlah item per halaman",
-          },
-          {
-            name: "category",
-            in: "query",
-            schema: { type: "string" },
-            description: "Filter berdasarkan ID atau slug kategori UMKM",
-          },
-          {
-            name: "search",
-            in: "query",
-            schema: { type: "string" },
-            description: "Kata kunci pencarian nama atau deskripsi UMKM",
-          },
-          {
-            name: "exclude",
-            in: "query",
-            schema: { type: "string" },
-            description: "ID atau slug UMKM yang dikecualikan dari hasil",
-          },
-          {
-            name: "status",
-            in: "query",
-            schema: { type: "string" },
-            description: "Filter status UMKM",
-          },
-        ],
         responses: {
           "200": { description: "Daftar UMKM berhasil diambil" },
         },
@@ -448,38 +572,8 @@ export const openApiSpec = {
         tags: ["UMKM"],
         operationId: "registerNewUmkm",
         summary: "Pendaftaran UMKM Baru",
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                required: ["name", "ownerName", "umkmCategoryId", "description", "phone", "coverUrl", "address", "latitude", "longitude"],
-                properties: {
-                  name: { type: "string", example: "Kopi Desa Lestari" },
-                  ownerName: { type: "string", example: "Budi Santoso" },
-                  umkmCategoryId: { type: "string", example: "1" },
-                  newCategoryName: { type: "string", example: "Kuliner" },
-                  villagePotentialId: { type: "string", example: "1" },
-                  description: { type: "string", example: "Warung kopi lokal khas desa." },
-                  phone: { type: "string", example: "081234567890" },
-                  email: { type: "string", example: "kopilestari@example.com" },
-                  coverUrl: { type: "string", example: "https://example.com/cover.jpg" },
-                  address: { type: "string", example: "Jl. Raya Desa No. 12" },
-                  latitude: { type: "number", example: -7.123456 },
-                  longitude: { type: "number", example: 110.123456 },
-                  openDay: { type: "string", example: "Senin - Sabtu" },
-                  startTime: { type: "string", example: "08:00" },
-                  endTime: { type: "string", example: "20:00" },
-                  since: { type: "integer", example: 2020 },
-                },
-              },
-            },
-          },
-        },
         responses: {
           "201": { description: "Pendaftaran UMKM berhasil diajukan" },
-          "400": { description: "Validasi input gagal" },
         },
       },
     },
@@ -494,12 +588,10 @@ export const openApiSpec = {
             in: "path",
             required: true,
             schema: { type: "string" },
-            description: "Slug unik UMKM",
           },
         ],
         responses: {
           "200": { description: "Detail UMKM ditemukan" },
-          "404": { description: "UMKM tidak ditemukan" },
         },
       },
     },
@@ -518,42 +610,8 @@ export const openApiSpec = {
         tags: ["Maps"],
         operationId: "getMapLocationsList",
         summary: "Daftar Titik Lokasi Peta Desa",
-        parameters: [
-          {
-            name: "categorySlug",
-            in: "query",
-            schema: { type: "string" },
-            description: "Filter berdasarkan slug kategori peta",
-          },
-          {
-            name: "q",
-            in: "query",
-            schema: { type: "string" },
-            description: "Kata kunci pencarian nama/deskripsi lokasi",
-          },
-        ],
         responses: {
           "200": { description: "Daftar lokasi peta" },
-        },
-      },
-    },
-    "/api/public/maps/location": {
-      get: {
-        tags: ["Maps"],
-        operationId: "getMapLocationById",
-        summary: "Detail Titik Lokasi berdasarkan ID",
-        parameters: [
-          {
-            name: "id",
-            in: "query",
-            required: true,
-            schema: { type: "string" },
-            description: "ID titik lokasi",
-          },
-        ],
-        responses: {
-          "200": { description: "Detail lokasi ditemukan" },
-          "404": { description: "Lokasi tidak ditemukan" },
         },
       },
     },
@@ -578,12 +636,10 @@ export const openApiSpec = {
             in: "path",
             required: true,
             schema: { type: "string" },
-            description: "Slug unik potensi desa",
           },
         ],
         responses: {
           "200": { description: "Detail potensi desa ditemukan" },
-          "404": { description: "Potensi desa tidak ditemukan" },
         },
       },
     },
@@ -592,22 +648,8 @@ export const openApiSpec = {
         tags: ["Storage"],
         operationId: "uploadMediaFile",
         summary: "Upload Gambar ke Storage",
-        requestBody: {
-          required: true,
-          content: {
-            "multipart/form-data": {
-              schema: {
-                type: "object",
-                properties: {
-                  file: { type: "string", format: "binary" },
-                },
-              },
-            },
-          },
-        },
         responses: {
           "201": { description: "File berhasil diunggah" },
-          "400": { description: "File tidak valid" },
         },
       },
     },

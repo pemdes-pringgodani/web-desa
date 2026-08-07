@@ -1,9 +1,9 @@
 import { z } from "zod";
 
 export const articleBlockSchema = z.object({
-  subHeading: z.string().nullable().optional(), // Sub heading per block opsional
+  subHeading: z.string().nullable().optional(),
   content: z.string().min(1, "Konten artikel (paragraf) wajib diisi"),
-  imageUrl: z.string().nullable().optional(), // Gambar pada paragraf opsional
+  imageUrl: z.string().nullable().optional(),
   sortOrder: z.preprocess(
     (val) => (val === undefined || val === null ? 0 : Number(val)),
     z.number().int()
@@ -17,8 +17,8 @@ export const articleDetailSchema = z.object({
 });
 
 export const galleryImageSchema = z.object({
-  imageUrl: z.string().min(1, "URL foto galeri wajib diisi"), // Gambar pada galeri WAJIB
-  imageDescription: z.string().nullable().optional(), // Deskripsi foto galeri opsional
+  imageUrl: z.string().min(1, "URL foto galeri wajib diisi"),
+  imageDescription: z.string().nullable().optional(),
   sortOrder: z.preprocess(
     (val) => (val === undefined || val === null ? 0 : Number(val)),
     z.number().int()
@@ -31,7 +31,7 @@ export const galleryDetailSchema = z.object({
   images: z.array(galleryImageSchema).optional(),
 });
 
-export const createNewsSchema = z
+const baseCreateNewsSchema = z
   .object({
     title: z.string().min(1, "Judul berita wajib diisi"),
     newsCategoryId: z.preprocess(
@@ -49,7 +49,7 @@ export const createNewsSchema = z
       z.string().nullable().optional()
     ),
     excerpt: z.string().min(1, "Ringkasan berita (excerpt) wajib diisi"),
-    status: z.string().default("PUBLISHED"),
+    status: z.string().default("PENDING"),
     publishedAt: z.preprocess(
       (val) => (val ? new Date(String(val)) : new Date()),
       z.date().optional()
@@ -67,6 +67,51 @@ export const createNewsSchema = z
     }
   );
 
+export const createNewsSchema = z.preprocess((val: any) => {
+  if (val && typeof val === "object") {
+    const raw = { ...val };
+
+    // Set default status PENDING if not specified
+    if (!raw.status) {
+      raw.status = "PENDING";
+    }
+
+    // Auto map flat blocks to article object
+    if (Array.isArray(raw.blocks) && raw.blocks.length > 0 && !raw.article) {
+      raw.article = {
+        title: raw.title || "",
+        coverUrl: raw.coverUrl || "/images/placeholder-news.jpg",
+        blocks: raw.blocks
+          .filter((b: any) => b && b.content && b.content.trim())
+          .map((b: any, idx: number) => ({
+            subHeading: b.subHeading || null,
+            content: b.content || "",
+            imageUrl: b.imageUrl || null,
+            sortOrder: b.sortOrder ?? idx + 1,
+          })),
+      };
+    }
+
+    // Auto map flat galleryImages to gallery object
+    if (Array.isArray(raw.galleryImages) && raw.galleryImages.length > 0 && !raw.gallery) {
+      raw.gallery = {
+        title: raw.title || "",
+        coverUrl: raw.coverUrl || "/images/placeholder-news.jpg",
+        images: raw.galleryImages
+          .filter((g: any) => g && g.imageUrl && g.imageUrl.trim())
+          .map((g: any, idx: number) => ({
+            imageUrl: g.imageUrl || "",
+            imageDescription: g.imageDescription || null,
+            sortOrder: g.sortOrder ?? idx + 1,
+          })),
+      };
+    }
+
+    return raw;
+  }
+  return val;
+}, baseCreateNewsSchema);
+
 export const getNewsQuerySchema = z.object({
   category: z.string().optional(),
   type: z.string().optional(),
@@ -74,5 +119,5 @@ export const getNewsQuerySchema = z.object({
   q: z.string().optional(),
 });
 
-export type CreateNewsDTO = z.infer<typeof createNewsSchema>;
+export type CreateNewsDTO = z.infer<typeof baseCreateNewsSchema>;
 export type GetNewsQueryDTO = z.infer<typeof getNewsQuerySchema>;

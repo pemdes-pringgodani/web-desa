@@ -4,8 +4,12 @@ import { NextResponse, type NextRequest } from "next/server";
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 1. Handle CORS for all API routes (/api/*)
+  // 1. Handle CORS & Request Logging for all API routes (/api/*)
   if (pathname.startsWith("/api/")) {
+    const timestamp = new Date().toLocaleTimeString("id-ID");
+    const query = request.nextUrl.search;
+    console.log(`[${timestamp}] 🚀 ${request.method} ${pathname}${query}`);
+
     if (request.method === "OPTIONS") {
       return new NextResponse(null, {
         status: 200,

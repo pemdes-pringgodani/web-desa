@@ -20,4 +20,20 @@ export class SettingsService {
 
     return { settings };
   }
+
+  static async updateSettings(input: {
+    websiteName?: string;
+    logoUrl?: string;
+    faviconUrl?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    facebook?: string;
+    instagram?: string;
+    youtube?: string;
+    tiktok?: string;
+  }) {
+    const updated = await SettingsRepository.updateSetting(input);
+    return this.getSettings();
+  }
 }

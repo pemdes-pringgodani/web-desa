@@ -41,7 +41,6 @@ export class UmkmRepository {
     const where: any = {};
 
     if (category) {
-      // Check if category is BigInt/ID or slug
       if (!isNaN(Number(category))) {
         where.umkmCategoryId = BigInt(category);
       } else {
@@ -147,6 +146,14 @@ export class UmkmRepository {
           }
         : null,
     };
+  }
+
+  static async deleteUmkm(id: bigint) {
+    return prisma.$transaction(async (tx) => {
+      await tx.product.deleteMany({ where: { umkmId: id } });
+      await tx.umkmGallery.deleteMany({ where: { umkmId: id } });
+      return tx.umkm.delete({ where: { id } });
+    });
   }
 
   static async findCategoryByName(name: string, tx?: any) {

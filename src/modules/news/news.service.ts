@@ -25,6 +25,16 @@ export class NewsService {
     return news;
   }
 
+  static async deleteNews(idStr: string) {
+    let id: bigint;
+    try {
+      id = BigInt(idStr);
+    } catch {
+      throw new NotFoundError("ID berita tidak valid");
+    }
+    return NewsRepository.deleteNews(id);
+  }
+
   static async createNews(input: unknown) {
     // 1. Validate payload
     const validation = createNewsSchema.safeParse(input);
@@ -76,6 +86,20 @@ export class NewsService {
             tx
           );
           finalTypeId = newType.id;
+        }
+      } else if (isNaN(Number(data.newsTypeId))) {
+        const targetSlug =
+          data.newsTypeId === "STANDARD"
+            ? "artikel"
+            : data.newsTypeId === "GALLERY"
+            ? "galeri-foto"
+            : data.newsTypeId;
+        const existingType = await NewsRepository.findTypeBySlug(targetSlug, tx);
+        if (existingType) {
+          finalTypeId = existingType.id;
+        } else {
+          const firstType = await tx.newsType.findFirst();
+          finalTypeId = firstType ? firstType.id : BigInt(1);
         }
       } else {
         finalTypeId = BigInt(data.newsTypeId);
