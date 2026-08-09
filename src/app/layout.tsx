@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Web Desa - Sedang Dalam Pemeliharaan",
-  description: "Website Resmi Pemerintah Desa sedang dalam pemeliharaan sistem berkala.",
+  title: "API Backend - Web Desa Pringgodani",
+  description: "Layanan REST API backend Website Resmi Pemerintah Desa Pringgodani.",
 };
 
 export default function RootLayout({
