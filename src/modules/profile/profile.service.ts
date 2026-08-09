@@ -49,6 +49,7 @@ export class ProfileService {
         position: o.position,
         photo: o.photoUrl,
       })),
+      structureImageUrl: rawProfile.structureImageUrl || "",
     };
 
     return {
