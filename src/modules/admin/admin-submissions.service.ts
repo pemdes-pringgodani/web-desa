@@ -6,15 +6,19 @@ export class AdminSubmissionsService {
     return AdminSubmissionsRepository.getPendingSubmissions();
   }
 
-  static async setNewsStatus(id: string, status: string) {
+  static async setNewsStatus(id: string, status: string, rejectionReason?: string) {
     const validStatuses = ["PUBLISHED", "REJECTED", "DRAFT", "PENDING"];
     if (!validStatuses.includes(status)) {
       throw new ValidationError(`Status berita '${status}' tidak valid`);
     }
     const updated = await AdminSubmissionsRepository.updateNewsStatus(
       id,
-      status as "PUBLISHED" | "REJECTED" | "DRAFT"
+      status as "PUBLISHED" | "REJECTED" | "DRAFT",
+      rejectionReason
     );
+    if (!updated) {
+      throw new ValidationError(`Berita dengan ID '${id}' tidak ditemukan`);
+    }
     return {
       id: updated.id.toString(),
       status: updated.status,
@@ -22,19 +26,24 @@ export class AdminSubmissionsService {
     };
   }
 
-  static async setUmkmStatus(id: string, status: string) {
+  static async setUmkmStatus(id: string, status: string, rejectionReason?: string) {
     const validStatuses = ["APPROVED", "REJECTED", "PENDING"];
     if (!validStatuses.includes(status)) {
       throw new ValidationError(`Status UMKM '${status}' tidak valid`);
     }
     const updated = await AdminSubmissionsRepository.updateUmkmStatus(
       id,
-      status as "APPROVED" | "REJECTED" | "PENDING"
+      status as "APPROVED" | "REJECTED" | "PENDING",
+      rejectionReason
     );
+    if (!updated) {
+      throw new ValidationError(`UMKM dengan ID '${id}' tidak ditemukan`);
+    }
     return {
       id: updated.id.toString(),
       status: updated.status,
       name: updated.name,
+      phone: updated.phone,
     };
   }
 }

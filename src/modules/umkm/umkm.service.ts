@@ -172,12 +172,43 @@ export class UmkmService {
           finalCategoryId = newCat.id;
         }
       } else {
-        finalCategoryId = BigInt(data.umkmCategoryId);
+        if (!isNaN(Number(data.umkmCategoryId))) {
+          finalCategoryId = BigInt(data.umkmCategoryId);
+        } else {
+          let cat = await tx.umkmCategory.findFirst({
+            where: {
+              OR: [
+                { slug: data.umkmCategoryId.toLowerCase() },
+                { name: { equals: data.umkmCategoryId, mode: "insensitive" } },
+              ],
+            },
+          });
+          if (!cat) {
+            const catSlug = await generateCategorySlug(data.umkmCategoryId, tx);
+            cat = await tx.umkmCategory.create({
+              data: { name: data.umkmCategoryId, slug: catSlug },
+            });
+          }
+          finalCategoryId = cat.id;
+        }
       }
 
-      const finalPotentialId = data.villagePotentialId
-        ? BigInt(data.villagePotentialId)
-        : null;
+      let finalPotentialId: bigint | null = null;
+      if (data.villagePotentialId) {
+        if (!isNaN(Number(data.villagePotentialId))) {
+          finalPotentialId = BigInt(data.villagePotentialId);
+        } else {
+          const pot = await tx.villagePotential.findFirst({
+            where: {
+              OR: [
+                { slug: data.villagePotentialId.toLowerCase() },
+                { name: { equals: data.villagePotentialId, mode: "insensitive" } },
+              ],
+            },
+          });
+          if (pot) finalPotentialId = pot.id;
+        }
+      }
 
       const slug = await generateUmkmSlug(data.name, tx);
 
@@ -194,7 +225,7 @@ export class UmkmService {
           address: data.address,
           latitude: data.latitude,
           longitude: data.longitude,
-          googlePlaceId: data.googlePlaceId || null,
+          googlePlaceId: data.addressUrl || data.googlePlaceId || null,
           since: data.since,
           openDay: data.openDay || null,
           startTime: data.startTime ? new Date(`1970-01-01T${data.startTime}:00Z`) : null,

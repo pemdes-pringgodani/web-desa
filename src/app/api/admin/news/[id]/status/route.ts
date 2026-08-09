@@ -9,9 +9,9 @@ export async function PATCH(
   try {
     const { id } = await context.params;
     const body = await request.json();
-    const { status } = body;
+    const { status, rejectionReason } = body;
 
-    const result = await AdminSubmissionsService.setNewsStatus(id, status);
+    const result = await AdminSubmissionsService.setNewsStatus(id, status, rejectionReason);
     return ApiResponse.success(result, `Status berita berhasil diperbarui menjadi ${status}`);
   } catch (error: any) {
     if (error instanceof AppError) {

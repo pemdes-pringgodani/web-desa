@@ -30,15 +30,16 @@ export const registerUmkmSchema = z.object({
   ),
   coverUrl: z.string().min(1, "Cover wajib diunggah"),
   address: z.string().min(1, "Alamat wajib diisi"),
+  addressUrl: z.string().nullable().optional(),
+  googlePlaceId: z.string().nullable().optional(),
   latitude: z.preprocess(
-    (val) => Number(val),
-    z.number({ message: "Koordinat Latitude wajib diisi" })
+    (val) => (val === "" || val === undefined || val === null ? -7.98 : Number(val)),
+    z.number().optional()
   ),
   longitude: z.preprocess(
-    (val) => Number(val),
-    z.number({ message: "Koordinat Longitude wajib diisi" })
+    (val) => (val === "" || val === undefined || val === null ? 112.63 : Number(val)),
+    z.number().optional()
   ),
-  googlePlaceId: z.string().nullable().optional(),
   since: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? null : Number(val)),
     z.number().int().nullable().optional()

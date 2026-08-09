@@ -36,7 +36,7 @@ export class UmkmRepository {
     category,
     search,
     exclude,
-    status,
+    status = "APPROVED",
   }: FindAllUmkmParams = {}) {
     const where: any = {};
 
@@ -66,7 +66,7 @@ export class UmkmRepository {
       }
     }
 
-    if (status) {
+    if (status && status !== "ALL") {
       where.status = status;
     }
 
@@ -100,6 +100,7 @@ export class UmkmRepository {
       phone: u.phone,
       whatsappNumber: u.phone,
       address: u.address,
+      addressUrl: u.googlePlaceId || null,
       ownerName: u.ownerName,
       status: u.status,
       publishedAt: new Date().toISOString(),
@@ -130,6 +131,7 @@ export class UmkmRepository {
       logo: u.coverUrl || "/images/placeholder-umkm.jpg",
       whatsappNumber: u.phone,
       address: u.address,
+      addressUrl: u.googlePlaceId || null,
       ownerName: u.ownerName,
       publishedAt: new Date().toISOString(),
       latitude: u.latitude ? Number(u.latitude) : -7.98,

@@ -163,6 +163,7 @@ model News {
   slug               String            @unique(map: "news_slug_uq") @db.VarChar(256)
   excerpt            String            @db.Text
   status             String            @db.VarChar(15)
+  rejectionReason    String?           @map("rejection_reason") @db.Text
   publishedAt        DateTime?         @map("published_at") @db.Timestamptz
 
   category           NewsCategory      @relation(fields: [newsCategoryId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "news_category_fk")
@@ -259,6 +260,7 @@ model Umkm {
   ownerName          String            @map("owner_name") @db.VarChar(256)
   since              Int?
   status             String            @db.VarChar(50)
+  rejectionReason    String?           @map("rejection_reason") @db.Text
 
   category           UmkmCategory      @relation(fields: [umkmCategoryId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "umkm_category_fk")
   potential          VillagePotential? @relation(fields: [villagePotentialId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "umkm_potential_fk")

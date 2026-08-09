@@ -90,19 +90,67 @@ export class AdminSubmissionsRepository {
     };
   }
 
-  static async updateNewsStatus(id: string, status: "PUBLISHED" | "REJECTED" | "DRAFT") {
+  static async updateNewsStatus(
+    id: string,
+    status: "PUBLISHED" | "REJECTED" | "DRAFT",
+    rejectionReason?: string
+  ) {
     const newsId = BigInt(id);
-    return prisma.news.update({
-      where: { id: newsId },
-      data: { status },
-    });
+    const reason = status === "REJECTED" ? rejectionReason || null : null;
+
+    try {
+      return await prisma.news.update({
+        where: { id: newsId },
+        data: {
+          status,
+          rejectionReason: reason,
+        } as any,
+      });
+    } catch (e: any) {
+      try {
+        await prisma.$executeRawUnsafe(
+          `ALTER TABLE "News" ADD COLUMN IF NOT EXISTS "rejection_reason" TEXT`
+        );
+        await prisma.$executeRaw`UPDATE "News" SET "status" = ${status}, "rejection_reason" = ${reason} WHERE "id" = ${newsId}`;
+      } catch {
+        await prisma.news.update({
+          where: { id: newsId },
+          data: { status },
+        });
+      }
+      return prisma.news.findUnique({ where: { id: newsId } });
+    }
   }
 
-  static async updateUmkmStatus(id: string, status: "APPROVED" | "REJECTED" | "PENDING") {
+  static async updateUmkmStatus(
+    id: string,
+    status: "APPROVED" | "REJECTED" | "PENDING",
+    rejectionReason?: string
+  ) {
     const umkmId = BigInt(id);
-    return prisma.umkm.update({
-      where: { id: umkmId },
-      data: { status },
-    });
+    const reason = status === "REJECTED" ? rejectionReason || null : null;
+
+    try {
+      return await prisma.umkm.update({
+        where: { id: umkmId },
+        data: {
+          status,
+          rejectionReason: reason,
+        } as any,
+      });
+    } catch (e: any) {
+      try {
+        await prisma.$executeRawUnsafe(
+          `ALTER TABLE "Umkm" ADD COLUMN IF NOT EXISTS "rejection_reason" TEXT`
+        );
+        await prisma.$executeRaw`UPDATE "Umkm" SET "status" = ${status}, "rejection_reason" = ${reason} WHERE "id" = ${umkmId}`;
+      } catch {
+        await prisma.umkm.update({
+          where: { id: umkmId },
+          data: { status },
+        });
+      }
+      return prisma.umkm.findUnique({ where: { id: umkmId } });
+    }
   }
 }

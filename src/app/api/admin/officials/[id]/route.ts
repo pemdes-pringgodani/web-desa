@@ -1,32 +1,56 @@
-import { AdminProfilService } from "../../../../../modules/admin/admin-profil.service";
+import { prisma } from "../../../../../shared/db/client";
 import { ApiResponse } from "../../../../../shared/utils/response";
-import { AppError } from "../../../../../shared/errors/app-error";
 
-export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function PUT(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const { id } = await params;
-    const body = await req.json();
-    const data = await AdminProfilService.updateOfficial(id, body);
-    return ApiResponse.success(data);
+    const officialId = BigInt(id);
+    const body = await request.json();
+    const { name, position, photoUrl, email, greeting } = body;
+
+    const updated = await prisma.villageOfficial.update({
+      where: { id: officialId },
+      data: {
+        ...(name ? { name } : {}),
+        ...(position ? { position } : {}),
+        ...(photoUrl ? { photoUrl } : {}),
+        ...(email !== undefined ? { email } : {}),
+        ...(greeting !== undefined ? { greeting } : {}),
+      },
+    });
+
+    return ApiResponse.success({
+      id: updated.id.toString(),
+      name: updated.name,
+      position: updated.position,
+      photoUrl: updated.photoUrl,
+      email: updated.email || "",
+      greeting: updated.greeting || "",
+    });
   } catch (error: any) {
-    if (error instanceof AppError) {
-      return ApiResponse.error(error.message, error.statusCode, error.errors);
-    }
-    console.error(`Update official error:`, error);
-    return ApiResponse.error("Terjadi kesalahan saat memperbarui perangkat desa", 500);
+    console.error("Update official error:", error);
+    return ApiResponse.error("Gagal memperbarui perangkat desa", 500);
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const { id } = await params;
-    const data = await AdminProfilService.deleteOfficial(id);
-    return ApiResponse.success(data);
+    const officialId = BigInt(id);
+
+    await prisma.villageOfficial.delete({
+      where: { id: officialId },
+    });
+
+    return ApiResponse.success({ success: true, message: "Perangkat desa berhasil dihapus" });
   } catch (error: any) {
-    if (error instanceof AppError) {
-      return ApiResponse.error(error.message, error.statusCode, error.errors);
-    }
-    console.error(`Delete official error:`, error);
-    return ApiResponse.error("Terjadi kesalahan saat menghapus perangkat desa", 500);
+    console.error("Delete official error:", error);
+    return ApiResponse.error("Gagal menghapus perangkat desa", 500);
   }
 }

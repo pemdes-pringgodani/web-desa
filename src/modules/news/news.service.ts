@@ -1,6 +1,6 @@
 import { NewsRepository, FindAllNewsParams } from "./news.repository";
 import { createNewsSchema, CreateNewsDTO } from "./news.schema";
-import { generateNewsTypeSlug, generateNewsSlug } from "../../shared/utils/slug";
+import { generateNewsTypeSlug, generateNewsSlug, generateNewsCategorySlug } from "../../shared/utils/slug";
 import { ValidationError, NotFoundError } from "../../shared/errors/app-error";
 
 export class NewsService {
@@ -69,7 +69,25 @@ export class NewsService {
           finalCategoryId = newCat.id;
         }
       } else {
-        finalCategoryId = BigInt(data.newsCategoryId);
+        if (!isNaN(Number(data.newsCategoryId))) {
+          finalCategoryId = BigInt(data.newsCategoryId);
+        } else {
+          let cat = await tx.newsCategory.findFirst({
+            where: {
+              OR: [
+                { slug: data.newsCategoryId.toLowerCase() },
+                { name: { equals: data.newsCategoryId, mode: "insensitive" } },
+              ],
+            },
+          });
+          if (!cat) {
+            const catSlug = await generateNewsCategorySlug(data.newsCategoryId, tx);
+            cat = await tx.newsCategory.create({
+              data: { name: data.newsCategoryId, slug: catSlug },
+            });
+          }
+          finalCategoryId = cat.id;
+        }
       }
 
       // b. Handle Type
@@ -105,9 +123,22 @@ export class NewsService {
         finalTypeId = BigInt(data.newsTypeId);
       }
 
-      const finalPotentialId = data.villagePotentialId
-        ? BigInt(data.villagePotentialId)
-        : null;
+      let finalPotentialId: bigint | null = null;
+      if (data.villagePotentialId) {
+        if (!isNaN(Number(data.villagePotentialId))) {
+          finalPotentialId = BigInt(data.villagePotentialId);
+        } else {
+          const pot = await tx.villagePotential.findFirst({
+            where: {
+              OR: [
+                { slug: data.villagePotentialId.toLowerCase() },
+                { name: { equals: data.villagePotentialId, mode: "insensitive" } },
+              ],
+            },
+          });
+          if (pot) finalPotentialId = pot.id;
+        }
+      }
 
       const slug = await generateNewsSlug(data.title, tx);
 

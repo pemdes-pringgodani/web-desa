@@ -48,6 +48,8 @@ export class ProfileService {
         name: o.name,
         position: o.position,
         photo: o.photoUrl,
+        greeting: o.greeting || undefined,
+        email: o.email || undefined,
       })),
       structureImageUrl: rawProfile.structureImageUrl || "",
     };
