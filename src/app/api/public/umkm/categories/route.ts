@@ -1,21 +1,15 @@
-import { NextResponse } from "next/server";
-import { prisma } from "../../../../../lib/db";
-import { serializeBigInt } from "../../../../../lib/utils";
+import { UmkmService } from "../../../../../modules/umkm/umkm.service";
+import { ApiResponse } from "../../../../../shared/utils/response";
+import { AppError } from "../../../../../shared/errors/app-error";
 
 export async function GET() {
   try {
-    const categories = await prisma.umkmCategory.findMany({
-      orderBy: {
-        name: "asc",
-      },
-    });
-
-    return NextResponse.json(serializeBigInt(categories));
+    const categories = await UmkmService.getCategories();
+    return ApiResponse.success(categories);
   } catch (error: any) {
-    console.error("Categories API error:", error);
-    return NextResponse.json(
-      { error: "Terjadi kesalahan saat mengambil kategori UMKM" },
-      { status: 500 }
-    );
+    if (error instanceof AppError) {
+      return ApiResponse.error(error.message, error.statusCode, error.errors);
+    }
+    return ApiResponse.error("Terjadi kesalahan saat mengambil kategori UMKM", 500);
   }
 }

@@ -1,42 +1,22 @@
-import { NextResponse } from "next/server";
-import { prisma } from "../../../../../lib/db";
-import { serializeBigInt } from "../../../../../lib/utils";
+import { MapsService } from "../../../../../modules/maps/maps.service";
+import { ApiResponse } from "../../../../../shared/utils/response";
+import { AppError } from "../../../../../shared/errors/app-error";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const categoryIdStr = searchParams.get("categoryId");
-    const search = searchParams.get("search");
+    const categorySlug = searchParams.get("categorySlug") || undefined;
+    const searchQuery = searchParams.get("q") || undefined;
 
-    const whereClause: any = {};
-
-    if (categoryIdStr) {
-      whereClause.mapCategoryId = BigInt(categoryIdStr);
-    }
-
-    if (search && search.trim()) {
-      whereClause.name = {
-        contains: search.trim(),
-        mode: "insensitive",
-      };
-    }
-
-    const locations = await prisma.mapLocation.findMany({
-      where: whereClause,
-      include: {
-        category: true,
-      },
-      orderBy: {
-        name: "asc",
-      },
-    });
-
-    return NextResponse.json(serializeBigInt(locations));
+    const locations = await MapsService.getLocations(categorySlug, searchQuery);
+    return ApiResponse.success(locations);
   } catch (error: any) {
-    console.error("Fetch map locations error:", error);
-    return NextResponse.json(
-      { error: "Gagal mengambil lokasi penanda peta" },
-      { status: 500 }
-    );
+    if (error instanceof AppError) {
+      return ApiResponse.error(error.message, error.statusCode, error.errors);
+    }
+    return ApiResponse.error("Terjadi kesalahan saat mengambil lokasi peta", 500);
   }
 }

@@ -53,4 +53,7 @@ skills-lock.json
 # temporary testing page
 /src/app/temp
 
+# local testing uploads
+/public/uploads/
+
 

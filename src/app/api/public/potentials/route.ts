@@ -1,21 +1,15 @@
-import { NextResponse } from "next/server";
-import { prisma } from "../../../../lib/db";
-import { serializeBigInt } from "../../../../lib/utils";
+import { PotentialsService } from "../../../../modules/potentials/potentials.service";
+import { ApiResponse } from "../../../../shared/utils/response";
+import { AppError } from "../../../../shared/errors/app-error";
 
 export async function GET() {
   try {
-    const potentials = await prisma.villagePotential.findMany({
-      orderBy: {
-        name: "asc",
-      },
-    });
-
-    return NextResponse.json(serializeBigInt(potentials));
+    const potentials = await PotentialsService.getAllPotentials();
+    return ApiResponse.success(potentials);
   } catch (error: any) {
-    console.error("Potentials API error:", error);
-    return NextResponse.json(
-      { error: "Terjadi kesalahan saat mengambil potensi desa" },
-      { status: 500 }
-    );
+    if (error instanceof AppError) {
+      return ApiResponse.error(error.message, error.statusCode, error.errors);
+    }
+    return ApiResponse.error("Terjadi kesalahan saat mengambil daftar potensi desa", 500);
   }
 }
