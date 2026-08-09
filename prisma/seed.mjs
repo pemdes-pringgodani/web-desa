@@ -305,34 +305,7 @@ async function main() {
     create: { name: "Kuliner", slug: "kuliner", description: "Aneka kuliner olahan makanan & minuman khas desa" },
   });
 
-  const umkm1 = await prisma.umkm.upsert({
-    where: { slug: "kopi-pringgodani-asri" },
-    update: {},
-    create: {
-      umkmCategoryId: umkmCatKuliner.id,
-      villagePotentialId: potJeruk.id,
-      name: "Kopi Pringgodani Asri",
-      slug: "kopi-pringgodani-asri",
-      ownerName: "Ibu Nurhayati",
-      description: "Produsen bubuk kopi biji roaster pilihan dengan aroma khas perbukitan Pringgodani.",
-      phone: "081234567891",
-      email: "kopipringgodani@gmail.com",
-      address: "Dusun Krajan RT 02 / RW 01, Desa Pringgodani",
-      coverUrl: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=800&q=80",
-      latitude: -7.9812,
-      longitude: 112.6315,
-      openDay: "Senin - Sabtu",
-      since: 2018,
-      status: "APPROVED",
-    },
-  });
 
-  await prisma.product.createMany({
-    data: [
-      { umkmId: umkm1.id, name: "Kopi Robusta Pringgodani 250g", description: "Biji kopi robusta pilihan dipanggang sedang", price: 35000, imageUrl: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=800&q=80" },
-      { umkmId: umkm1.id, name: "Sirup Jeruk Manis Alami 500ml", description: "Sirup konsentrat buah jeruk manis asli", price: 25000, imageUrl: "https://images.unsplash.com/photo-1611080626919-7cf5a9dbab5b?auto=format&fit=crop&w=1200&q=80" },
-    ],
-  });
 
   // 7. Maps
   console.log("7/7 Seeding Map Locations...");

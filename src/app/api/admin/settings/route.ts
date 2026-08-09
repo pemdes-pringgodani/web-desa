@@ -2,9 +2,11 @@ import { SettingsService } from "../../../../modules/settings/settings.service";
 import { SettingsRepository } from "../../../../modules/settings/settings.repository";
 import { ApiResponse } from "../../../../shared/utils/response";
 import { AppError } from "../../../../shared/errors/app-error";
+import { requireAdmin } from "../../../../shared/auth/require-admin";
 
 export async function GET() {
   try {
+    await requireAdmin();
     const raw = await SettingsRepository.getSetting();
     const data = {
       websiteName: raw?.websiteName || "Desa Pringgodani",
@@ -28,6 +30,7 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   try {
+    await requireAdmin();
     const body = await request.json();
     await SettingsRepository.updateSetting({
       websiteName: body.websiteName,

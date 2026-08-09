@@ -1,9 +1,11 @@
 import { AdminProfilService } from "../../../../modules/admin/admin-profil.service";
 import { ApiResponse } from "../../../../shared/utils/response";
 import { AppError } from "../../../../shared/errors/app-error";
+import { requireAdmin } from "../../../../shared/auth/require-admin";
 
 export async function GET() {
   try {
+    await requireAdmin();
     const data = await AdminProfilService.getProfil();
     return ApiResponse.success(data);
   } catch (error: any) {
@@ -17,6 +19,7 @@ export async function GET() {
 
 export async function PUT(req: Request) {
   try {
+    await requireAdmin();
     const body = await req.json();
     const data = await AdminProfilService.updateProfil(body);
     return ApiResponse.success(data);

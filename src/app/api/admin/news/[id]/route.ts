@@ -2,12 +2,14 @@ import { NewsService } from "../../../../../modules/news/news.service";
 import { NewsRepository } from "../../../../../modules/news/news.repository";
 import { ApiResponse } from "../../../../../shared/utils/response";
 import { AppError } from "../../../../../shared/errors/app-error";
+import { requireAdmin } from "../../../../../shared/auth/require-admin";
 
 export async function GET(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdmin();
     const { id } = await context.params;
     const data = await NewsRepository.findById(id);
     if (!data) {
@@ -28,6 +30,7 @@ export async function PUT(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdmin();
     const { id } = await context.params;
     const body = await request.json();
     const data = await NewsRepository.updateNews(id, body);
@@ -46,6 +49,7 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdmin();
     const { id } = await context.params;
     await NewsService.deleteNews(id);
     return ApiResponse.success(null, "Berita berhasil dihapus");

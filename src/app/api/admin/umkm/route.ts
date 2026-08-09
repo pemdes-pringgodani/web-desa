@@ -1,9 +1,11 @@
 import { UmkmService } from "../../../../modules/umkm/umkm.service";
 import { ApiResponse } from "../../../../shared/utils/response";
 import { AppError } from "../../../../shared/errors/app-error";
+import { requireAdmin } from "../../../../shared/auth/require-admin";
 
 export async function GET(request: Request) {
   try {
+    await requireAdmin();
     const { searchParams } = new URL(request.url);
     const page = searchParams.get("page") ? parseInt(searchParams.get("page")!, 10) : 1;
     const limit = searchParams.get("limit") ? parseInt(searchParams.get("limit")!, 10) : 20;
@@ -29,6 +31,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    await requireAdmin();
     const body = await request.json();
     const result = await UmkmService.registerUmkm(body);
     return ApiResponse.success(result, "UMKM berhasil ditambahkan oleh Admin", 201);

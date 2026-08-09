@@ -15,12 +15,88 @@ async function main() {
   await prisma.villagePotential.deleteMany({});
   await prisma.villageStatistic.deleteMany({});
   await prisma.statisticProfile.deleteMany({});
-  await prisma.historyDetail.deleteMany({});
   await prisma.villageHistory.deleteMany({});
   await prisma.villageOfficial.deleteMany({});
   await prisma.villageProfile.deleteMany({});
   await prisma.villageMission.deleteMany({});
   await prisma.villageVision.deleteMany({});
+  // Hapus data users & roles agar bersih saat reseeding
+  await prisma.user.deleteMany({});
+  await prisma.role.deleteMany({});
+
+  // 1b. Seed Roles
+  console.log("🔑 Seeding Roles...");
+  const adminRole = await prisma.role.upsert({
+    where: { id: BigInt(1) },
+    update: { name: "ADMIN", description: "Administrator Desa" },
+    create: { id: BigInt(1), name: "ADMIN", description: "Administrator Desa" },
+  });
+
+  const userRole = await prisma.role.upsert({
+    where: { id: BigInt(2) },
+    update: { name: "USER", description: "Warga Desa / Pengguna Umum" },
+    create: { id: BigInt(2), name: "USER", description: "Warga Desa / Pengguna Umum" },
+  });
+
+  // 1c. Seed Admin User in Supabase Auth & Local DB
+  console.log("👤 Seeding Admin User in Supabase Auth & Local DB...");
+  try {
+    const { createAdminClient } = require("../src/shared/supabase/server");
+    const supabaseAdmin = createAdminClient();
+
+    const adminEmail = process.env.SEED_ADMIN_EMAIL || "admin@pringgodani.desa.id";
+    const adminPassword = process.env.SEED_ADMIN_PASSWORD || "admin123";
+    
+    // Check if user already exists in Supabase
+    let adminUuid = "";
+    const { data: usersList } = await supabaseAdmin.auth.admin.listUsers();
+    const existingUser = usersList?.users?.find((u: any) => u.email === adminEmail);
+
+    if (existingUser) {
+      adminUuid = existingUser.id;
+      console.log(`Admin user already exists in Supabase Auth with ID: ${adminUuid}. Syncing password...`);
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(adminUuid, {
+        password: adminPassword,
+        email_confirm: true,
+      });
+      if (updateError) {
+        console.error("Gagal mensinkronisasikan password admin di Supabase:", updateError);
+      }
+    } else {
+      const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+        email: adminEmail,
+        password: adminPassword,
+        email_confirm: true,
+        user_metadata: { name: "Admin Desa Pringgodani" }
+      });
+      if (createError) {
+        console.error("Gagal membuat admin user di Supabase:", createError);
+      } else if (newUser?.user) {
+        adminUuid = newUser.user.id;
+        console.log(`Admin user created in Supabase Auth with ID: ${adminUuid}`);
+      }
+    }
+
+    if (adminUuid) {
+      await prisma.user.upsert({
+        where: { id: adminUuid },
+        update: {
+          name: "Admin Desa Pringgodani",
+          email: adminEmail,
+          roleId: adminRole.id
+        },
+        create: {
+          id: adminUuid,
+          name: "Admin Desa Pringgodani",
+          email: adminEmail,
+          roleId: adminRole.id
+        }
+      });
+      console.log("Admin user synced to local database public.users table successfully.");
+    }
+  } catch (err) {
+    console.warn("Skip seeding user auth admin: Pastikan Docker Supabase lokal sedang berjalan.", err);
+  }
 
   // 2. Website Setting
   console.log("1/7 Seeding Website Setting...");
@@ -742,37 +818,7 @@ async function main() {
     create: { name: "Kuliner", slug: "kuliner", description: "Aneka kuliner olahan makanan & minuman khas desa" },
   });
 
-  const umkm1 = await prisma.umkm.upsert({
-    where: { slug: "kopi-pringgodani-asri" },
-    update: {},
-    create: {
-      umkmCategoryId: umkmCatKuliner.id,
-      villagePotentialId: potTebu.id,
-      name: "Kopi Pringgodani Asri",
-      slug: "kopi-pringgodani-asri",
-      ownerName: "Ibu Nurhayati",
-      description: "Produsen bubuk kopi biji roaster pilihan dengan aroma khas perbukitan Pringgodani.",
-      phone: "081234567891",
-      email: "kopipringgodani@gmail.com",
-      address: "Dusun Krajan RT 02 / RW 01, Desa Pringgodani",
-      coverUrl: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=800&q=80",
-      latitude: -7.9812,
-      longitude: 112.6315,
-      openDay: "Senin - Sabtu",
-      since: 2018,
-      status: "APPROVED",
-    },
-  });
 
-  const existingProducts = await prisma.product.findMany({ where: { umkmId: umkm1.id } });
-  if (existingProducts.length === 0) {
-    await prisma.product.createMany({
-      data: [
-        { umkmId: umkm1.id, name: "Kopi Robusta Pringgodani 250g", description: "Biji kopi robusta pilihan dipanggang sedang", price: 35000, imageUrl: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=800&q=80" },
-        { umkmId: umkm1.id, name: "Sirup Jeruk Manis Alami 500ml", description: "Sirup konsentrat buah jeruk manis asli", price: 25000, imageUrl: "https://images.unsplash.com/photo-1611080626919-7cf5a9dbab5b?auto=format&fit=crop&w=1200&q=80" },
-      ],
-    });
-  }
 
   // Map Categories & Real Locations in Desa Pringgodani, Kec. Bantur, Kab. Malang
   const mapCatPemerintahan = await prisma.mapCategory.upsert({

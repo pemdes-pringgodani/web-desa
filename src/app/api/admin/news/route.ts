@@ -1,9 +1,11 @@
 import { NewsService } from "../../../../modules/news/news.service";
 import { ApiResponse } from "../../../../shared/utils/response";
 import { AppError } from "../../../../shared/errors/app-error";
+import { requireAdmin } from "../../../../shared/auth/require-admin";
 
 export async function GET(request: Request) {
   try {
+    await requireAdmin();
     const { searchParams } = new URL(request.url);
     const page = searchParams.get("page") ? parseInt(searchParams.get("page")!, 10) : 1;
     const limit = searchParams.get("limit") ? parseInt(searchParams.get("limit")!, 10) : 20;
@@ -31,6 +33,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    await requireAdmin();
     const body = await request.json();
     const result = await NewsService.createNews({ ...body, status: "PUBLISHED" });
     return ApiResponse.success(result, "Berita berhasil diterbitkan oleh Admin", 201);
