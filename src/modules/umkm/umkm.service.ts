@@ -77,6 +77,8 @@ export class UmkmService {
           address: input.address ?? existing.address,
           coverUrl: input.coverUrl ?? existing.coverUrl,
           status: input.status ?? existing.status,
+          latitude: input.latitude !== undefined ? Number(input.latitude) : existing.latitude,
+          longitude: input.longitude !== undefined ? Number(input.longitude) : existing.longitude,
         },
       });
 
