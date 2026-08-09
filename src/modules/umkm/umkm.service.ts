@@ -2,11 +2,115 @@ import { UmkmRepository, FindAllUmkmParams } from "./umkm.repository";
 import { RegisterUmkmDTO, registerUmkmSchema } from "./umkm.schema";
 import { generateCategorySlug, generateUmkmSlug } from "../../shared/utils/slug";
 import { ValidationError, NotFoundError } from "../../shared/errors/app-error";
+import { prisma } from "../../shared/db/client";
 
 export class UmkmService {
   static async getCategories() {
     const categories = await UmkmRepository.findAllCategories();
     return { items: categories };
+  }
+
+  static async getUmkmById(idStr: string) {
+    let id: bigint;
+    try {
+      id = BigInt(idStr);
+    } catch {
+      throw new NotFoundError("ID UMKM tidak valid");
+    }
+    const u = await prisma.umkm.findUnique({
+      where: { id },
+      include: {
+        category: true,
+        potential: true,
+        galleries: true,
+        products: true,
+      },
+    });
+
+    if (!u) {
+      throw new NotFoundError(`UMKM dengan ID '${idStr}' tidak ditemukan`);
+    }
+
+    return {
+      id: u.id.toString(),
+      name: u.name,
+      slug: u.slug,
+      umkmCategoryId: u.umkmCategoryId.toString(),
+      categoryName: u.category?.name || "UMKM",
+      description: u.description,
+      phone: u.phone,
+      address: u.address,
+      ownerName: u.ownerName,
+      coverUrl: u.coverUrl,
+      status: u.status,
+      galleries: u.galleries.map((g) => g.imageUrl),
+      products: u.products.map((p) => ({
+        name: p.name,
+        price: p.price ? Number(p.price) : 0,
+        description: p.description,
+        imageUrl: p.imageUrl,
+      })),
+    };
+  }
+
+  static async updateUmkm(idStr: string, input: any) {
+    let id: bigint;
+    try {
+      id = BigInt(idStr);
+    } catch {
+      throw new NotFoundError("ID UMKM tidak valid");
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const existing = await tx.umkm.findUnique({ where: { id } });
+      if (!existing) {
+        throw new NotFoundError(`UMKM dengan ID '${idStr}' tidak ditemukan`);
+      }
+
+      const updated = await tx.umkm.update({
+        where: { id },
+        data: {
+          name: input.name ?? existing.name,
+          ownerName: input.ownerName ?? existing.ownerName,
+          description: input.description ?? existing.description,
+          phone: input.phone ?? existing.phone,
+          address: input.address ?? existing.address,
+          coverUrl: input.coverUrl ?? existing.coverUrl,
+          status: input.status ?? existing.status,
+        },
+      });
+
+      if (input.galleries) {
+        await tx.umkmGallery.deleteMany({ where: { umkmId: id } });
+        if (input.galleries.length > 0) {
+          await tx.umkmGallery.createMany({
+            data: input.galleries.map((url: string) => ({
+              umkmId: id,
+              imageUrl: url,
+            })),
+          });
+        }
+      }
+
+      if (input.products) {
+        await tx.product.deleteMany({ where: { umkmId: id } });
+        if (input.products.length > 0) {
+          await tx.product.createMany({
+            data: input.products.map((prod: any) => ({
+              umkmId: id,
+              name: prod.name,
+              description: prod.description,
+              price: prod.price,
+              imageUrl: prod.imageUrl || null,
+            })),
+          });
+        }
+      }
+
+      return updated;
+    });
+
+    return result;
   }
 
   static async getAllUmkm(params: FindAllUmkmParams) {
