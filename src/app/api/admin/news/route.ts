@@ -35,8 +35,11 @@ export async function POST(request: Request) {
   try {
     await requireAdmin();
     const body = await request.json();
-    const result = await NewsService.createNews({ ...body, status: "PUBLISHED" });
-    return ApiResponse.success(result, "Berita berhasil diterbitkan oleh Admin", 201);
+    const result = await NewsService.createNews({
+      ...body,
+      status: body.status || "PUBLISHED",
+    });
+    return ApiResponse.success(result, "Berita berhasil disimpan oleh Admin", 201);
   } catch (error: any) {
     if (error instanceof AppError) {
       return ApiResponse.error(error.message, error.statusCode, error.errors);
