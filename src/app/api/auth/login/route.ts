@@ -5,7 +5,7 @@ import { AppError } from "../../../../shared/errors/app-error";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const user = await AuthService.signIn(body);
+    const { user, session } = await AuthService.signIn(body);
 
     const serializedUser = encodeURIComponent(JSON.stringify({
       name: user.user_metadata?.name || user.name || "Admin Desa",
@@ -13,10 +13,22 @@ export async function POST(request: Request) {
       role: "ADMIN",
     }));
 
-    const response = ApiResponse.success(user, "Login berhasil", 200);
+    const payload = {
+      ...user,
+      access_token: session?.access_token,
+      refresh_token: session?.refresh_token,
+      session,
+    };
+
+    const response = ApiResponse.success(payload, "Login berhasil", 200);
+
+    const isProduction = process.env.NODE_ENV === "production" || process.env.VERCEL === "1";
+    const sameSitePolicy = isProduction ? "None" : "Lax";
+    const secureFlag = isProduction ? "; Secure" : "";
+
     response.headers.append(
       "Set-Cookie",
-      `pringgodani_admin_session=${serializedUser}; Path=/; Max-Age=10800; Secure; SameSite=Lax`
+      `pringgodani_admin_session=${serializedUser}; Path=/; Max-Age=10800; SameSite=${sameSitePolicy}${secureFlag}`
     );
     return response;
   } catch (error: any) {

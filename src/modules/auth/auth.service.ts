@@ -45,7 +45,7 @@ export class AuthService {
       throw new AppError(error.message, 400);
     }
 
-    return data.user;
+    return { user: data.user, session: data.session };
   }
 
   static async signOut() {
