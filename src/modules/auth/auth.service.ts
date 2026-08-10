@@ -1,4 +1,4 @@
-import { createClient } from "../../shared/supabase/server";
+import { createClient, createAdminClient } from "../../shared/supabase/server";
 import { signInSchema, signUpSchema } from "./auth.schema";
 import { ValidationError, AppError, UnauthorizedError } from "../../shared/errors/app-error";
 
@@ -34,7 +34,7 @@ export class AuthService {
     }
 
     const { email, password } = validation.data;
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
