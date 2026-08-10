@@ -1,11 +1,13 @@
 import { prisma } from "../../../../../shared/db/client";
 import { ApiResponse } from "../../../../../shared/utils/response";
+import { requireAdmin } from "../../../../../shared/auth/require-admin";
 
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdmin();
     const { id } = await params;
     const officialId = BigInt(id);
     const body = await request.json();
@@ -41,6 +43,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAdmin();
     const { id } = await params;
     const officialId = BigInt(id);
 

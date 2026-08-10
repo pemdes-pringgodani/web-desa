@@ -1,5 +1,6 @@
 import { SettingsRepository } from "../../../../modules/settings/settings.repository";
 import { ApiResponse } from "../../../../shared/utils/response";
+import { requireAdmin } from "../../../../shared/auth/require-admin";
 
 export async function GET() {
   try {
@@ -36,6 +37,7 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   try {
+    await requireAdmin();
     const body = await request.json();
     const websiteName = body.website_name || body.websiteName;
     const logoUrl = body.logo_url || body.logoUrl;

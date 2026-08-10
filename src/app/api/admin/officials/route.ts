@@ -1,5 +1,6 @@
 import { prisma } from "../../../../shared/db/client";
 import { ApiResponse } from "../../../../shared/utils/response";
+import { requireAdmin } from "../../../../shared/auth/require-admin";
 
 export async function GET() {
   try {
@@ -23,6 +24,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    await requireAdmin();
     const body = await request.json();
     const { name, position, photoUrl, email, greeting } = body;
 
