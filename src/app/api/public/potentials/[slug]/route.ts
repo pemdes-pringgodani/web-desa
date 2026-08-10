@@ -9,7 +9,9 @@ export async function GET(
   try {
     const { slug } = await context.params;
     const potential = await PotentialsService.getPotentialBySlug(slug);
-    return ApiResponse.success(potential);
+    const response = ApiResponse.success(potential);
+    response.headers.set("Cache-Control", "public, s-maxage=300, stale-while-revalidate=600");
+    return response;
   } catch (error: any) {
     if (error instanceof AppError) {
       return ApiResponse.error(error.message, error.statusCode, error.errors);
