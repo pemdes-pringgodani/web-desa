@@ -11,9 +11,32 @@ export class ForbiddenError extends AppError {
 
 export async function requireAdmin() {
   const supabase = await createClient();
-  const { data: { user }, error } = await supabase.auth.getUser();
+  let { data: { user }, error } = await supabase.auth.getUser();
 
+  // Fallback: Check admin session cookie if Supabase SSR user is null
   if (error || !user) {
+    try {
+      const { cookies } = await import("next/headers");
+      const cookieStore = await cookies();
+      const sessionCookie = cookieStore.get("pringgodani_admin_session")?.value;
+      if (sessionCookie) {
+        const parsed = JSON.parse(decodeURIComponent(sessionCookie));
+        if (parsed?.email) {
+          const dbUser = await prisma.user.findFirst({
+            where: { email: parsed.email },
+            include: { role: true },
+          });
+          if (dbUser) {
+            const roleName = dbUser.role?.name?.toUpperCase();
+            if (roleName === "ADMIN" || roleName === "SUPER_ADMIN" || roleName === "SUPERADMIN") {
+              return dbUser;
+            }
+          }
+        }
+      }
+    } catch {
+      // ignore parse error
+    }
     throw new UnauthorizedError("Pengguna belum terautentikasi");
   }
 
