@@ -73,36 +73,8 @@ export async function proxy(request: NextRequest) {
     console.log(`[${timestamp}] 🚀 ${request.method} ${pathname}${query}`);
   }
 
-  // 3. Run Supabase Session Refresh for ALL requests to handle cookies properly
+  // 3. Prepare response with Security & CORS headers
   let supabaseResponse = NextResponse.next({ request });
-
-  if (process.env.NEXT_PUBLIC_SUPABASE_URL && (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)) {
-    try {
-      const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-          cookies: {
-            getAll() {
-              return request.cookies.getAll();
-            },
-            setAll(cookiesToSet) {
-              cookiesToSet.forEach(({ name, value }) =>
-                request.cookies.set(name, value)
-              );
-              supabaseResponse = NextResponse.next({ request });
-              cookiesToSet.forEach(({ name, value, options }) =>
-                supabaseResponse.cookies.set(name, value, options)
-              );
-            },
-          },
-        }
-      );
-      await supabase.auth.getUser();
-    } catch (err) {
-      console.warn("Supabase auth session refresh warning:", err);
-    }
-  }
 
   // 4. Inject Security & CORS headers for API requests only if origin is allowed
   if (pathname.startsWith("/api/")) {

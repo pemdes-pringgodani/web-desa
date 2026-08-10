@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     const response = ApiResponse.success(user, "Login berhasil", 200);
     response.headers.append(
       "Set-Cookie",
-      `pringgodani_admin_session=${serializedUser}; Path=/; Max-Age=10800; HttpOnly; Secure; SameSite=Lax`
+      `pringgodani_admin_session=${serializedUser}; Path=/; Max-Age=10800; Secure; SameSite=Lax`
     );
     return response;
   } catch (error: any) {
