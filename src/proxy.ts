@@ -104,12 +104,15 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // 4. Inject CORS headers for API requests only if origin is allowed
-  if (pathname.startsWith("/api/") && allowed && origin) {
-    supabaseResponse.headers.set("Access-Control-Allow-Origin", matchedOrigin);
-    supabaseResponse.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
-    supabaseResponse.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, X-Api-Version");
-    supabaseResponse.headers.set("Access-Control-Allow-Credentials", "true");
+  // 4. Inject Security & CORS headers for API requests only if origin is allowed
+  if (pathname.startsWith("/api/")) {
+    supabaseResponse.headers.set("X-Content-Type-Options", "nosniff");
+    if (allowed && origin) {
+      supabaseResponse.headers.set("Access-Control-Allow-Origin", matchedOrigin);
+      supabaseResponse.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
+      supabaseResponse.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, X-Api-Version");
+      supabaseResponse.headers.set("Access-Control-Allow-Credentials", "true");
+    }
   }
 
   return supabaseResponse;
