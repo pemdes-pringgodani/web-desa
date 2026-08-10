@@ -33,10 +33,23 @@ function isOriginAllowed(origin: string | null): boolean {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const origin = request.headers.get("origin");
+  const acceptHeader = request.headers.get("accept") || "";
+  const fetchMode = request.headers.get("sec-fetch-mode") || "";
   const allowed = isOriginAllowed(origin);
   const matchedOrigin = allowed && origin ? origin : (process.env.FRONTEND_URL || "");
 
-  // 1. Handle Preflight OPTIONS request instantly
+  // 1. Block Direct Browser Address Bar Navigation to Admin API Routes
+  if (
+    pathname.startsWith("/api/admin/") &&
+    (fetchMode === "navigate" || (acceptHeader.includes("text/html") && !origin))
+  ) {
+    return NextResponse.json(
+      { success: false, error: "Direct browser HTML navigation to Admin API endpoints is strictly prohibited." },
+      { status: 403 }
+    );
+  }
+
+  // 2. Handle Preflight OPTIONS request instantly
   if (pathname.startsWith("/api/") && request.method === "OPTIONS") {
     if (!allowed) {
       return new NextResponse(null, { status: 403 });
@@ -60,7 +73,7 @@ export async function proxy(request: NextRequest) {
     console.log(`[${timestamp}] 🚀 ${request.method} ${pathname}${query}`);
   }
 
-  // 2. Run Supabase Session Refresh for ALL requests to handle cookies properly
+  // 3. Run Supabase Session Refresh for ALL requests to handle cookies properly
   let supabaseResponse = NextResponse.next({ request });
 
   if (process.env.NEXT_PUBLIC_SUPABASE_URL && (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)) {
@@ -91,7 +104,7 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // 3. Inject CORS headers for API requests only if origin is allowed
+  // 4. Inject CORS headers for API requests only if origin is allowed
   if (pathname.startsWith("/api/") && allowed && origin) {
     supabaseResponse.headers.set("Access-Control-Allow-Origin", matchedOrigin);
     supabaseResponse.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");

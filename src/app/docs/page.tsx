@@ -4,8 +4,11 @@ import { useEffect, useState } from "react";
 
 export default function SwaggerDocsPage() {
   const [loaded, setLoaded] = useState(false);
+  const isProduction = process.env.NODE_ENV === "production" && process.env.NEXT_PUBLIC_ENABLE_SWAGGER !== "true";
 
   useEffect(() => {
+    if (isProduction) return;
+
     // 1. Inject Swagger UI CSS
     const link = document.createElement("link");
     link.rel = "stylesheet";
@@ -33,10 +36,26 @@ export default function SwaggerDocsPage() {
     document.body.appendChild(script);
 
     return () => {
-      document.head.removeChild(link);
-      document.body.removeChild(script);
+      if (document.head.contains(link)) document.head.removeChild(link);
+      if (document.body.contains(script)) document.body.removeChild(script);
     };
-  }, []);
+  }, [isProduction]);
+
+  if (isProduction) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-6 text-center font-sans">
+        <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl space-y-4">
+          <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto text-amber-400 text-2xl font-bold">
+            🔒
+          </div>
+          <h1 className="text-2xl font-bold text-white">404 - Access Restricted</h1>
+          <p className="text-slate-400 text-sm leading-relaxed">
+            Dokumentasi Swagger API dinonaktifkan di lingkungan produksi demi alasan keamanan sistem.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 font-sans p-4 md:p-8">

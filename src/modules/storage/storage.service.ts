@@ -4,14 +4,7 @@ import fs from "fs";
 import path from "path";
 
 export class StorageService {
-  static async uploadFile(file: File | null) {
-    console.log("=== DEBUG UPLOAD FILE ===");
-    console.log("Type of file:", typeof file);
-    console.log("Is instance of File:", file instanceof File);
-    console.log("File name:", file?.name);
-    console.log("File size:", file?.size, "bytes");
-    console.log("File type:", file?.type);
-
+  static async uploadFile(file: File | null, category?: string) {
     if (!file) {
       throw new ValidationError("Tidak ada file yang diunggah");
     }
@@ -28,6 +21,18 @@ export class StorageService {
       );
     }
 
+    // Determine target bucket based on category & environment variables
+    const cat = (category || "").toLowerCase().trim();
+    let targetBucket = process.env.SUPABASE_STORAGE_BUCKET_PROFILE || "village-profile";
+
+    if (cat === "umkm") {
+      targetBucket = process.env.SUPABASE_STORAGE_BUCKET_UMKM || "umkm";
+    } else if (cat === "news" || cat === "berita") {
+      targetBucket = process.env.SUPABASE_STORAGE_BUCKET_NEWS || "news";
+    } else if (cat === "profile" || cat === "village" || cat === "potensi") {
+      targetBucket = process.env.SUPABASE_STORAGE_BUCKET_PROFILE || "village-profile";
+    }
+
     const storageProvider = process.env.STORAGE_PROVIDER || (process.env.NODE_ENV === "production" ? "supabase" : "local");
 
     const fileExtension = file.name.split(".").pop();
@@ -41,9 +46,8 @@ export class StorageService {
     const buffer = Buffer.from(bytes);
 
     if (storageProvider === "local") {
-      const uploadDir = path.join(process.cwd(), "public", "uploads");
+      const uploadDir = path.join(process.cwd(), "public", "uploads", targetBucket);
       
-      // Create public/uploads folder if it doesn't exist
       if (!fs.existsSync(uploadDir)) {
         fs.mkdirSync(uploadDir, { recursive: true });
       }
@@ -52,24 +56,25 @@ export class StorageService {
       fs.writeFileSync(filePath, buffer);
 
       const backendUrl = process.env.BACKEND_URL || "http://localhost:3000";
-      return { url: `${backendUrl}/uploads/${uniqueFileName}` };
+      return { url: `${backendUrl}/uploads/${targetBucket}/${uniqueFileName}`, bucket: targetBucket };
     } else {
       const supabase = createAdminClient();
       const { error } = await supabase.storage
-        .from("umkm")
+        .from(targetBucket)
         .upload(uniqueFileName, buffer, {
           contentType: file.type,
+          upsert: true,
         });
 
       if (error) {
-        throw new AppError(`Gagal mengunggah berkas: ${error.message}`, 500);
+        throw new AppError(`Gagal mengunggah berkas ke bucket ${targetBucket}: ${error.message}`, 500);
       }
 
       const { data: publicUrlData } = supabase.storage
-        .from("umkm")
+        .from(targetBucket)
         .getPublicUrl(uniqueFileName);
 
-      return { url: publicUrlData.publicUrl };
+      return { url: publicUrlData.publicUrl, bucket: targetBucket };
     }
   }
 }

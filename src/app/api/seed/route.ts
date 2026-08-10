@@ -1,8 +1,18 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/shared/db/client";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const token = searchParams.get("token");
+    
+    if (process.env.NODE_ENV === "production" && token !== process.env.SEED_ADMIN_PASSWORD) {
+      return NextResponse.json(
+        { success: false, message: "Akses seeding ditolak di lingkungan produksi" },
+        { status: 403 }
+      );
+    }
+
     console.log("🌱 Starting Database Seeding via Next.js API Route...");
 
     // 1. Clear Existing Data (except UMKM to preserve test products)
