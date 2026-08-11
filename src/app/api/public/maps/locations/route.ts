@@ -12,7 +12,9 @@ export async function GET(request: Request) {
     const searchQuery = searchParams.get("q") || undefined;
 
     const locations = await MapsService.getLocations(categorySlug, searchQuery);
-    return ApiResponse.success(locations);
+    const response = ApiResponse.success(locations);
+    response.headers.set("Cache-Control", "public, s-maxage=300, stale-while-revalidate=600");
+    return response;
   } catch (error: any) {
     if (error instanceof AppError) {
       return ApiResponse.error(error.message, error.statusCode, error.errors);
