@@ -28,7 +28,10 @@ export const registerUmkmSchema = z.object({
     (val) => (val === "" ? null : val),
     z.string().email("Format email tidak valid").nullable().optional()
   ),
-  coverUrl: z.string().min(1, "Cover wajib diunggah"),
+  coverUrl: z.preprocess(
+    (val) => (!val || val === "" ? "/images/placeholder-umkm.jpg" : val),
+    z.string().optional().default("/images/placeholder-umkm.jpg")
+  ),
   address: z.string().min(1, "Alamat wajib diisi"),
   addressUrl: z.string().nullable().optional(),
   googlePlaceId: z.string().nullable().optional(),

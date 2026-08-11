@@ -221,7 +221,7 @@ export class UmkmService {
           description: data.description,
           phone: data.phone,
           email: data.email || null,
-          coverUrl: data.coverUrl,
+          coverUrl: data.coverUrl || "/images/placeholder-umkm.jpg",
           address: data.address,
           latitude: data.latitude,
           longitude: data.longitude,
