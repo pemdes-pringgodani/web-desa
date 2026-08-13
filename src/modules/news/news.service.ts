@@ -4,8 +4,8 @@ import { generateNewsTypeSlug, generateNewsSlug, generateNewsCategorySlug } from
 import { ValidationError, NotFoundError } from "../../shared/errors/app-error";
 
 export class NewsService {
-  static async getCategories() {
-    const categories = await NewsRepository.findAllCategories();
+  static async getCategories(includeAll = false) {
+    const categories = await NewsRepository.findAllCategories(includeAll);
     return { items: categories };
   }
 

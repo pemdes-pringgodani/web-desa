@@ -5,8 +5,8 @@ import { ValidationError, NotFoundError } from "../../shared/errors/app-error";
 import { prisma } from "../../shared/db/client";
 
 export class UmkmService {
-  static async getCategories() {
-    const categories = await UmkmRepository.findAllCategories();
+  static async getCategories(includeAll = false) {
+    const categories = await UmkmRepository.findAllCategories(includeAll);
     return { items: categories };
   }
 
