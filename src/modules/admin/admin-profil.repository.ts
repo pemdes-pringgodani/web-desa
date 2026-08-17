@@ -4,47 +4,39 @@ export class AdminProfilRepository {
   static async getVillageProfile() {
     const profile = await prisma.villageProfile.findFirst({
       include: {
-        vision: {
-          include: {
-            missions: {
-              orderBy: { sortOrder: "asc" },
-            },
-          },
-        },
-        officials: true,
-        histories: {
-          include: {
-            details: true,
-          },
+        officials: {
+          orderBy: { id: "asc" },
         },
       },
     });
 
     if (!profile) {
       return {
+        villageName: "Desa Pringgodani",
         headName: "Ki Suryo Pringgo",
         headPosition: "Kepala Desa Pringgodani",
         headPhoto: "https://pringgondaniblog.wordpress.com/wp-content/uploads/2017/07/dsc_0607.jpg",
         headGreeting: "Selamat datang di website resmi Desa Pringgodani.",
-        historyText: "Desa Pringgodani berdiri sejak masa kolonial...",
-        vision: "Mewujudkan Desa Pringgodani yang mandiri, maju, dan sejahtera.",
-        missions: ["Meningkatkan kualitas pelayanan publik berbasis digital", "Mendorong UMKM desa"],
-        structureImageUrl: "https://pringgondaniblog.wordpress.com/wp-content/uploads/2017/07/j.png",
+        address: "Jl. Raya Desa Pringgodani No. 1, Bantur, Malang",
+        phone: "081234567890",
+        email: "info@pringgodani.desa.id",
         officials: [],
       };
     }
 
-    const firstOfficial = profile.officials[0];
+    const headOfficial = profile.officials.find((o) =>
+      o.position.toLowerCase().includes("kepala desa")
+    ) || profile.officials[0];
 
     return {
-      headName: firstOfficial?.name || "Ki Suryo Pringgo",
-      headPosition: firstOfficial?.position || "Kepala Desa",
-      headPhoto: firstOfficial?.photoUrl || "https://pringgondaniblog.wordpress.com/wp-content/uploads/2017/07/dsc_0607.jpg",
-      headGreeting: firstOfficial?.greeting || "Selamat datang di website resmi Desa Pringgodani.",
-      historyText: profile.histories[0]?.details[0]?.content || "Desa Pringgodani berdiri sejak masa kolonial...",
-      vision: profile.vision?.vision || "Mewujudkan Desa Pringgodani yang mandiri, maju, dan sejahtera.",
-      missions: profile.vision?.missions.map((m) => m.mission) || [],
-      structureImageUrl: profile.structureImageUrl || "",
+      villageName: profile.villageName,
+      headName: headOfficial?.name || "Ki Suryo Pringgo",
+      headPosition: headOfficial?.position || "Kepala Desa",
+      headPhoto: profile.headPhoto || headOfficial?.photoUrl || "/images/kepala-desa.jpg",
+      headGreeting: profile.headGreeting || "Selamat datang di portal LokalUMKM Desa Pringgodani.",
+      address: profile.address,
+      phone: profile.phone,
+      email: profile.email || "info@pringgodani.desa.id",
       officials: profile.officials.map((o) => ({
         id: o.id.toString(),
         name: o.name,
@@ -59,30 +51,69 @@ export class AdminProfilRepository {
   static async updateVillageProfile(payload: any) {
     const profile = await prisma.villageProfile.findFirst();
 
+    const dataToUpdate: any = {};
+    if (payload.villageName) dataToUpdate.villageName = payload.villageName;
+    if (payload.headGreeting) dataToUpdate.headGreeting = payload.headGreeting;
+    if (payload.headPhoto) dataToUpdate.headPhoto = payload.headPhoto;
+    if (payload.address) dataToUpdate.address = payload.address;
+    if (payload.phone) dataToUpdate.phone = payload.phone;
+    if (payload.email !== undefined) dataToUpdate.email = payload.email;
+
     if (profile) {
-      if (payload.structureImageUrl) {
-        await prisma.villageProfile.update({
-          where: { id: profile.id },
-          data: {
-            structureImageUrl: payload.structureImageUrl,
+      await prisma.villageProfile.update({
+        where: { id: profile.id },
+        data: dataToUpdate,
+      });
+
+      if (payload.headName || payload.headPosition || payload.headPhoto) {
+        const headOfficial = await prisma.villageOfficial.findFirst({
+          where: {
+            villageProfileId: profile.id,
+            position: { contains: "Kepala Desa", mode: "insensitive" },
           },
         });
-      }
 
-      if (payload.vision && profile.villageVisionId) {
-        await prisma.villageVision.update({
-          where: { id: profile.villageVisionId },
-          data: { vision: payload.vision },
-        });
+        if (headOfficial) {
+          await prisma.villageOfficial.update({
+            where: { id: headOfficial.id },
+            data: {
+              ...(payload.headName && { name: payload.headName }),
+              ...(payload.headPosition && { position: payload.headPosition }),
+              ...(payload.headPhoto && { photoUrl: payload.headPhoto }),
+              ...(payload.headGreeting && { greeting: payload.headGreeting }),
+            },
+          });
+        }
       }
+    } else {
+      await prisma.villageProfile.create({
+        data: {
+          villageName: payload.villageName || "Desa Pringgodani",
+          headGreeting: payload.headGreeting || "Selamat datang di website resmi Desa Pringgodani.",
+          headPhoto: payload.headPhoto || "/images/kepala-desa.jpg",
+          address: payload.address || "Jl. Raya Desa Pringgodani No. 1, Bantur, Malang",
+          phone: payload.phone || "081234567890",
+          email: payload.email || "info@pringgodani.desa.id",
+        },
+      });
     }
 
     return { success: true };
   }
 
   static async addOfficial(payload: any) {
-    const profile = await prisma.villageProfile.findFirst();
-    if (!profile) throw new Error("Profile desa belum diinisialisasi");
+    let profile = await prisma.villageProfile.findFirst();
+    if (!profile) {
+      profile = await prisma.villageProfile.create({
+        data: {
+          villageName: "Desa Pringgodani",
+          headGreeting: "Selamat datang di portal LokalUMKM Desa Pringgodani.",
+          headPhoto: "/images/kepala-desa.jpg",
+          address: "Jl. Raya Desa Pringgodani No. 1, Bantur, Malang",
+          phone: "081234567890",
+        },
+      });
+    }
 
     const created = await prisma.villageOfficial.create({
       data: {
@@ -109,11 +140,11 @@ export class AdminProfilRepository {
     const updated = await prisma.villageOfficial.update({
       where: { id: officialId },
       data: {
-        name: payload.name,
-        position: payload.position,
-        photoUrl: payload.photoUrl,
-        email: payload.email || null,
-        greeting: payload.greeting || null,
+        ...(payload.name && { name: payload.name }),
+        ...(payload.position && { position: payload.position }),
+        ...(payload.photoUrl && { photoUrl: payload.photoUrl }),
+        ...(payload.email !== undefined && { email: payload.email || null }),
+        ...(payload.greeting !== undefined && { greeting: payload.greeting || null }),
       },
     });
 

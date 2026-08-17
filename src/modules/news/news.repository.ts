@@ -8,6 +8,8 @@ export interface FindAllNewsParams {
   search?: string;
   exclude?: string;
   status?: string;
+  umkmSlug?: string;
+  potentialSlug?: string;
 }
 
 export class NewsRepository {
@@ -39,7 +41,8 @@ export class NewsRepository {
     return categories.map((c) => ({
       id: c.id.toString(),
       name: c.name,
-      slug: c.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+      slug: c.slug || c.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+      description: c.description,
       newsCount: c._count.news,
     }));
   }
@@ -68,9 +71,10 @@ export class NewsRepository {
     });
   }
 
-  static async createCategory(data: { name: string; description?: string }, tx?: any) {
+  static async createCategory(data: { name: string; slug?: string; description?: string }, tx?: any) {
     const client = tx || prisma;
-    return client.newsCategory.create({ data });
+    const slug = data.slug || data.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    return client.newsCategory.create({ data: { ...data, slug } });
   }
 
   static async findTypeByName(name: string, tx?: any) {
@@ -80,16 +84,9 @@ export class NewsRepository {
     });
   }
 
-  static async createType(data: { name: string; slug: string }, tx?: any) {
+  static async createType(data: { name: string; slug: string; description?: string }, tx?: any) {
     const client = tx || prisma;
     return client.newsType.create({ data });
-  }
-
-  static async findTypeBySlug(slug: string, tx?: any) {
-    const client = tx || prisma;
-    return client.newsType.findFirst({
-      where: { slug: { equals: slug, mode: "insensitive" } },
-    });
   }
 
   static async findAllPaginated({
@@ -99,11 +96,13 @@ export class NewsRepository {
     type,
     search,
     exclude,
-    status,
+    status = "PUBLISHED",
+    umkmSlug,
+    potentialSlug,
   }: FindAllNewsParams = {}) {
     const where: any = {};
 
-    if (status) {
+    if (status && status !== "ALL") {
       where.status = status;
     }
 
@@ -111,22 +110,9 @@ export class NewsRepository {
       if (!isNaN(Number(category))) {
         where.newsCategoryId = BigInt(category);
       } else {
-        const allCategories = await prisma.newsCategory.findMany({});
-        const targetCategory = category.toLowerCase().trim();
-        const matchedCat = allCategories.find((c) => {
-          const slug = c.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-          return (
-            c.id.toString() === targetCategory ||
-            slug === targetCategory ||
-            c.name.toLowerCase() === targetCategory
-          );
-        });
-
-        if (matchedCat) {
-          where.newsCategoryId = matchedCat.id;
-        } else {
-          where.newsCategoryId = BigInt(-1);
-        }
+        where.category = {
+          slug: category,
+        };
       }
     }
 
@@ -136,6 +122,26 @@ export class NewsRepository {
       } else {
         where.type = { slug: type };
       }
+    }
+
+    if (umkmSlug) {
+      where.newsUmkms = {
+        some: {
+          umkm: {
+            slug: umkmSlug,
+          },
+        },
+      };
+    }
+
+    if (potentialSlug) {
+      where.newsPotentials = {
+        some: {
+          potential: {
+            slug: potentialSlug,
+          },
+        },
+      };
     }
 
     if (search && search.trim()) {
@@ -162,14 +168,25 @@ export class NewsRepository {
         include: {
           category: true,
           type: true,
-          articleDetails: {
+          articleDetail: {
             include: {
               blocks: { orderBy: { sortOrder: "asc" } },
             },
           },
-          galleryDetails: {
+          galleryDetail: {
             include: {
               images: { orderBy: { sortOrder: "asc" } },
+            },
+          },
+          newsUmkms: {
+            include: {
+              umkm: {
+                select: {
+                  id: true,
+                  name: true,
+                  slug: true,
+                },
+              },
             },
           },
         },
@@ -184,11 +201,13 @@ export class NewsRepository {
 
     const items = rawNews.map((n) => {
       const cover =
-        n.articleDetails[0]?.coverUrl ||
-        n.galleryDetails[0]?.coverUrl ||
+        n.coverUrl ||
+        n.articleDetail?.blocks?.find((b) => b.imageUrl)?.imageUrl ||
+        n.galleryDetail?.images?.[0]?.imageUrl ||
         "/images/placeholder-news.jpg";
-      const catName = n.category?.name || "Umum";
-      const catSlug = catName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+
+      const catName = n.category?.name || "Kabar UMKM";
+      const catSlug = n.category?.slug || "kabar-umkm";
 
       return {
         id: n.id.toString(),
@@ -200,15 +219,22 @@ export class NewsRepository {
         coverImage: cover,
         categoryName: catName,
         categorySlug: catSlug,
+        typeName: n.type?.name || "Artikel",
+        typeSlug: n.type?.slug || "article",
         authorName: "Humas Desa Pringgodani",
         publishedAt: n.publishedAt
           ? n.publishedAt.toISOString()
           : new Date().toISOString(),
         status: n.status,
+        taggedUmkms: n.newsUmkms.map((nu) => ({
+          id: nu.umkm.id.toString(),
+          name: nu.umkm.name,
+          slug: nu.umkm.slug,
+        })),
       };
     });
 
-    return { items, total };
+    return { items, total, page, limit, totalPages: Math.ceil(total / limit) || 1 };
   }
 
   static async findBySlug(slug: string) {
@@ -217,14 +243,58 @@ export class NewsRepository {
       include: {
         category: true,
         type: true,
-        articleDetails: {
+        articleDetail: {
           include: {
             blocks: { orderBy: { sortOrder: "asc" } },
           },
         },
-        galleryDetails: {
+        galleryDetail: {
           include: {
             images: { orderBy: { sortOrder: "asc" } },
+          },
+        },
+        newsUmkms: {
+          include: {
+            umkm: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                coverUrl: true,
+                phone: true,
+                address: true,
+              },
+            },
+          },
+        },
+        newsProducts: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                price: true,
+                imageUrl: true,
+                umkm: {
+                  select: {
+                    name: true,
+                    slug: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        newsPotentials: {
+          include: {
+            potential: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                coverUrl: true,
+              },
+            },
           },
         },
       },
@@ -232,20 +302,25 @@ export class NewsRepository {
 
     if (!n) return null;
 
-    const cover = n.articleDetails[0]?.coverUrl || n.galleryDetails[0]?.coverUrl || "/images/placeholder-news.jpg";
-    const catName = n.category?.name || "Umum";
-    const catSlug = catName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    const cover =
+      n.coverUrl ||
+      n.articleDetail?.blocks?.find((b) => b.imageUrl)?.imageUrl ||
+      n.galleryDetail?.images?.[0]?.imageUrl ||
+      "/images/placeholder-news.jpg";
+
+    const catName = n.category?.name || "Kabar UMKM";
+    const catSlug = n.category?.slug || "kabar-umkm";
 
     const contentSections: any[] = [];
-    n.articleDetails.forEach((art) => {
-      art.blocks.forEach((block) => {
+    if (n.articleDetail?.blocks) {
+      n.articleDetail.blocks.forEach((block) => {
         contentSections.push({
           sectionTitle: block.subHeading || null,
           paragraph: block.content,
           sectionImage: block.imageUrl || null,
         });
       });
-    });
+    }
 
     if (contentSections.length === 0) {
       contentSections.push({
@@ -255,43 +330,70 @@ export class NewsRepository {
       });
     }
 
-    const totalWords = contentSections.reduce((acc, curr) => acc + (curr.paragraph || "").split(/\s+/).length, 0);
+    const galleryImages =
+      n.galleryDetail?.images?.map((img) => ({
+        id: img.id.toString(),
+        imageUrl: img.imageUrl,
+        caption: img.imageDescription || null,
+      })) || [];
+
+    const taggedUmkms = n.newsUmkms.map((nu) => ({
+      id: nu.umkm.id.toString(),
+      name: nu.umkm.name,
+      slug: nu.umkm.slug,
+      coverUrl: nu.umkm.coverUrl || "/images/placeholder-umkm.jpg",
+      phone: nu.umkm.phone,
+      address: nu.umkm.address,
+    }));
+
+    const taggedProducts = n.newsProducts.map((np) => ({
+      id: np.product.id.toString(),
+      name: np.product.name,
+      price: np.product.price ? Number(np.product.price) : null,
+      imageUrl: np.product.imageUrl || "/images/placeholder-product.jpg",
+      umkmName: np.product.umkm?.name,
+      umkmSlug: np.product.umkm?.slug,
+    }));
+
+    const taggedPotentials = n.newsPotentials.map((np) => ({
+      id: np.potential.id.toString(),
+      name: np.potential.name,
+      slug: np.potential.slug,
+      coverUrl: np.potential.coverUrl || "/images/placeholder-potensi.jpg",
+    }));
+
+    const totalWords = contentSections.reduce(
+      (acc, curr) => acc + (curr.paragraph || "").split(/\s+/).length,
+      0
+    );
     const readingTimeMinutes = Math.max(1, Math.ceil(totalWords / 200));
 
     return {
       id: n.id.toString(),
       title: n.title,
       slug: n.slug,
+      excerpt: n.excerpt,
       summary: n.excerpt,
+      coverUrl: cover,
       coverImage: cover,
       coverCaption: n.title,
       categoryId: n.newsCategoryId.toString(),
       categoryName: catName,
       categorySlug: catSlug,
+      typeName: n.type?.name || "Artikel",
+      typeSlug: n.type?.slug || "article",
       authorName: "Humas Desa Pringgodani",
       authorRole: "Admin Desa",
       contentSections,
-      publishedAt: n.publishedAt ? n.publishedAt.toISOString() : new Date().toISOString(),
+      galleryImages,
+      taggedUmkms,
+      taggedProducts,
+      taggedPotentials,
+      publishedAt: n.publishedAt
+        ? n.publishedAt.toISOString()
+        : new Date().toISOString(),
       readingTimeMinutes,
     };
-  }
-
-  static async deleteNews(id: bigint) {
-    return prisma.$transaction(async (tx) => {
-      const articleDetails = await tx.articleDetail.findMany({ where: { newsId: id } });
-      for (const art of articleDetails) {
-        await tx.articleBlock.deleteMany({ where: { articleDetailId: art.id } });
-      }
-      await tx.articleDetail.deleteMany({ where: { newsId: id } });
-
-      const galleryDetails = await tx.galleryDetail.findMany({ where: { newsId: id } });
-      for (const gal of galleryDetails) {
-        await tx.galleryImage.deleteMany({ where: { galleryDetailId: gal.id } });
-      }
-      await tx.galleryDetail.deleteMany({ where: { newsId: id } });
-
-      return tx.news.delete({ where: { id } });
-    });
   }
 
   static async findById(idStr: string) {
@@ -307,9 +409,29 @@ export class NewsRepository {
       include: {
         category: true,
         type: true,
-        articleDetails: {
+        articleDetail: {
           include: {
             blocks: { orderBy: { sortOrder: "asc" } },
+          },
+        },
+        galleryDetail: {
+          include: {
+            images: { orderBy: { sortOrder: "asc" } },
+          },
+        },
+        newsUmkms: {
+          include: {
+            umkm: true,
+          },
+        },
+        newsProducts: {
+          include: {
+            product: true,
+          },
+        },
+        newsPotentials: {
+          include: {
+            potential: true,
           },
         },
       },
@@ -317,85 +439,58 @@ export class NewsRepository {
 
     if (!n) return null;
 
-    const cover = n.articleDetails[0]?.coverUrl || "/images/placeholder-news.jpg";
-    const catName = n.category?.name || "Umum";
-    const catSlug = catName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-
-    const contentSections: any[] = [];
-    if (n.articleDetails[0]?.blocks) {
-      n.articleDetails[0].blocks.forEach((block) => {
-        contentSections.push({
-          sectionTitle: block.subHeading || null,
-          paragraph: block.content,
-          sectionImage: block.imageUrl || null,
-        });
-      });
-    }
-
-    if (contentSections.length === 0) {
-      contentSections.push({
-        sectionTitle: null,
-        paragraph: n.excerpt,
-        sectionImage: null,
-      });
-    }
-
     return {
       id: n.id.toString(),
       title: n.title,
       slug: n.slug,
       excerpt: n.excerpt,
-      summary: n.excerpt,
-      coverUrl: cover,
-      coverImage: cover,
-      coverCaption: n.title,
+      coverUrl: n.coverUrl,
       categoryId: n.newsCategoryId.toString(),
-      categoryName: catName,
-      categorySlug: catSlug,
-      authorName: "Humas Desa Pringgodani",
-      authorRole: "Admin Desa",
+      categoryName: n.category?.name || "Kabar UMKM",
+      typeId: n.newsTypeId.toString(),
+      typeName: n.type?.name || "Artikel",
+      typeSlug: n.type?.slug || "article",
       status: n.status,
-      contentSections,
-      publishedAt: n.publishedAt ? n.publishedAt.toISOString() : new Date().toISOString(),
-      readingTimeMinutes: 2,
+      publishedAt: n.publishedAt?.toISOString() || null,
+      articleBlocks: n.articleDetail?.blocks?.map((b) => ({
+        id: b.id.toString(),
+        subHeading: b.subHeading,
+        content: b.content,
+        imageUrl: b.imageUrl,
+        sortOrder: b.sortOrder,
+      })) || [],
+      galleryImages: n.galleryDetail?.images?.map((img) => ({
+        id: img.id.toString(),
+        imageUrl: img.imageUrl,
+        imageDescription: img.imageDescription,
+        sortOrder: img.sortOrder,
+      })) || [],
+      taggedUmkmIds: n.newsUmkms.map((nu) => nu.umkmId.toString()),
+      taggedProductIds: n.newsProducts.map((np) => np.productId.toString()),
+      taggedPotentialIds: n.newsPotentials.map((np) => np.potentialId.toString()),
     };
   }
 
-  static async updateNews(idStr: string, payload: any) {
-    let id: bigint;
-    try {
-      id = BigInt(idStr);
-    } catch {
-      throw new Error("ID berita tidak valid");
-    }
+  static async deleteNews(id: bigint) {
+    return prisma.$transaction(async (tx) => {
+      await tx.newsUmkm.deleteMany({ where: { newsId: id } });
+      await tx.newsProduct.deleteMany({ where: { newsId: id } });
+      await tx.newsPotential.deleteMany({ where: { newsId: id } });
 
-    const updated = await prisma.news.update({
-      where: { id },
-      data: {
-        title: payload.title,
-        excerpt: payload.excerpt || payload.summary,
-        status: payload.status || "PUBLISHED",
-      },
-    });
-
-    if (payload.coverUrl) {
-      const articleDetail = await prisma.articleDetail.findFirst({
-        where: { newsId: id },
-      });
-
-      if (articleDetail) {
-        await prisma.articleDetail.update({
-          where: { id: articleDetail.id },
-          data: { coverUrl: payload.coverUrl },
-        });
+      const art = await tx.articleDetail.findUnique({ where: { newsId: id } });
+      if (art) {
+        await tx.articleBlock.deleteMany({ where: { articleDetailId: art.id } });
+        await tx.articleDetail.delete({ where: { id: art.id } });
       }
-    }
 
-    return {
-      id: updated.id.toString(),
-      title: updated.title,
-      status: updated.status,
-    };
+      const gal = await tx.galleryDetail.findUnique({ where: { newsId: id } });
+      if (gal) {
+        await tx.galleryImage.deleteMany({ where: { galleryDetailId: gal.id } });
+        await tx.galleryDetail.delete({ where: { id: gal.id } });
+      }
+
+      return tx.news.delete({ where: { id } });
+    });
   }
 
   static async executeTransaction<T>(fn: (tx: any) => Promise<T>): Promise<T> {

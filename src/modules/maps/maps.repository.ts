@@ -1,67 +1,28 @@
 import { prisma } from "../../shared/db/client";
-
-export interface CreateMapLocationDTO {
-  mapCategoryId: string;
-  name: string;
-  shortDescription?: string;
-  imageUrl?: string;
-  address?: string;
-  latitude: number;
-  longitude: number;
-  googleMapsUrl?: string;
-}
-
-export interface CreateMapCategoryDTO {
-  name: string;
-  slug: string;
-  icon?: string;
-  color?: string;
-}
+import { formatWhatsAppNumber, createWhatsAppLink } from "../../shared/utils/whatsapp";
 
 export class MapsRepository {
   static async findCategories() {
-    return prisma.mapCategory.findMany({
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        icon: true,
-        color: true,
-        _count: {
-          select: { locations: true },
+    const categories = await prisma.umkmCategory.findMany({
+      where: {
+        umkms: {
+          some: {
+            status: "APPROVED",
+            latitude: { not: null },
+            longitude: { not: null },
+          },
         },
       },
-      orderBy: {
-        name: "asc",
-      },
-    });
-  }
-
-  static async findLocations(categorySlug?: string, searchQuery?: string) {
-    const where: any = {};
-
-    if (categorySlug) {
-      where.category = { slug: categorySlug };
-    }
-
-    if (searchQuery) {
-      where.OR = [
-        { name: { contains: searchQuery, mode: "insensitive" } },
-        { shortDescription: { contains: searchQuery, mode: "insensitive" } },
-        { address: { contains: searchQuery, mode: "insensitive" } },
-      ];
-    }
-
-    const locations = await prisma.mapLocation.findMany({
-      where,
       include: {
-        category: {
+        _count: {
           select: {
-            id: true,
-            name: true,
-            slug: true,
-            icon: true,
-            color: true,
+            umkms: {
+              where: {
+                status: "APPROVED",
+                latitude: { not: null },
+                longitude: { not: null },
+              },
+            },
           },
         },
       },
@@ -70,114 +31,151 @@ export class MapsRepository {
       },
     });
 
-    return locations.map((loc) => ({
-      id: loc.id.toString(),
-      name: loc.name,
-      mapCategoryId: loc.mapCategoryId.toString(),
-      categoryId: loc.mapCategoryId.toString(),
-      categoryName: loc.category?.name || "Fasilitas Publik",
-      shortDescription: loc.shortDescription || "",
-      address: loc.address || "",
-      latitude: Number(loc.latitude),
-      longitude: Number(loc.longitude),
-      googleMapsUrl: loc.googleMapsUrl || undefined,
-      imageUrl: loc.imageUrl || undefined,
-      category: loc.category
-        ? {
-            id: loc.category.id.toString(),
-            name: loc.category.name,
-            slug: loc.category.slug,
-            icon: loc.category.icon,
-            color: loc.category.color,
-          }
-        : undefined,
+    return categories.map((c) => ({
+      id: c.id.toString(),
+      name: c.name,
+      slug: c.slug,
+      count: c._count.umkms,
+      icon: "store",
+      color: "#16a34a",
     }));
   }
 
-  static async findLocationById(id: bigint) {
-    return prisma.mapLocation.findUnique({
-      where: { id },
+  static async findLocations(categorySlug?: string, searchQuery?: string) {
+    const where: any = {
+      status: "APPROVED",
+      latitude: { not: null },
+      longitude: { not: null },
+    };
+
+    if (categorySlug && categorySlug !== "all") {
+      where.category = { slug: categorySlug };
+    }
+
+    if (searchQuery && searchQuery.trim()) {
+      const q = searchQuery.trim();
+      where.OR = [
+        { name: { contains: q, mode: "insensitive" } },
+        { description: { contains: q, mode: "insensitive" } },
+        { address: { contains: q, mode: "insensitive" } },
+      ];
+    }
+
+    const locations = await prisma.umkm.findMany({
+      where,
       include: {
         category: true,
+        _count: {
+          select: { products: true },
+        },
       },
+      orderBy: {
+        name: "asc",
+      },
+    });
+
+    return locations.map((loc) => {
+      const waFormatted = formatWhatsAppNumber(loc.phone);
+      const waTemplate = `Halo ${loc.name}, saya melihat lokasi toko Anda di Peta LokalUMKM Pringgodani dan ingin bertanya.`;
+      const waLink = createWhatsAppLink(loc.phone, waTemplate);
+
+      return {
+        id: loc.id.toString(),
+        name: loc.name,
+        slug: loc.slug,
+        categoryId: loc.umkmCategoryId.toString(),
+        categoryName: loc.category?.name || "UMKM",
+        categorySlug: loc.category?.slug || "umkm",
+        shortDescription: loc.description,
+        description: loc.description,
+        address: loc.address,
+        latitude: Number(loc.latitude),
+        longitude: Number(loc.longitude),
+        googleMapsUrl: loc.mapsUrl || `https://maps.google.com/?q=${loc.latitude},${loc.longitude}`,
+        mapsUrl: loc.mapsUrl || `https://maps.google.com/?q=${loc.latitude},${loc.longitude}`,
+        imageUrl: loc.coverUrl || "/images/placeholder-umkm.jpg",
+        coverUrl: loc.coverUrl || "/images/placeholder-umkm.jpg",
+        phone: loc.phone,
+        whatsappFormatted: waFormatted,
+        whatsappLink: waLink,
+        totalProducts: loc._count.products,
+        category: loc.category
+          ? {
+              id: loc.category.id.toString(),
+              name: loc.category.name,
+              slug: loc.category.slug,
+              icon: "store",
+              color: "#16a34a",
+            }
+          : undefined,
+      };
     });
   }
 
+  static async findLocationById(id: bigint) {
+    const loc = await prisma.umkm.findUnique({
+      where: { id },
+      include: {
+        category: true,
+        products: true,
+        galleries: true,
+      },
+    });
+
+    if (!loc) return null;
+
+    return {
+      id: loc.id.toString(),
+      name: loc.name,
+      slug: loc.slug,
+      categoryName: loc.category?.name || "UMKM",
+      categorySlug: loc.category?.slug || "umkm",
+      description: loc.description,
+      address: loc.address,
+      latitude: loc.latitude ? Number(loc.latitude) : null,
+      longitude: loc.longitude ? Number(loc.longitude) : null,
+      mapsUrl: loc.mapsUrl,
+      coverUrl: loc.coverUrl || "/images/placeholder-umkm.jpg",
+      phone: loc.phone,
+      products: loc.products.map((p) => ({
+        id: p.id.toString(),
+        name: p.name,
+        price: p.price ? Number(p.price) : null,
+        imageUrl: p.imageUrl,
+      })),
+      galleries: loc.galleries.map((g) => g.imageUrl),
+    };
+  }
+
   static async resolveLocation(query: string) {
-    return prisma.mapLocation.findFirst({
+    const loc = await prisma.umkm.findFirst({
       where: {
+        status: "APPROVED",
+        latitude: { not: null },
+        longitude: { not: null },
         OR: [
           { name: { contains: query, mode: "insensitive" } },
-          { shortDescription: { contains: query, mode: "insensitive" } },
+          { description: { contains: query, mode: "insensitive" } },
+          { address: { contains: query, mode: "insensitive" } },
         ],
       },
       include: {
         category: true,
       },
     });
-  }
 
-  static async createLocation(data: CreateMapLocationDTO) {
-    return prisma.mapLocation.create({
-      data: {
-        mapCategoryId: BigInt(data.mapCategoryId),
-        name: data.name,
-        shortDescription: data.shortDescription || null,
-        imageUrl: data.imageUrl || null,
-        address: data.address || null,
-        latitude: data.latitude,
-        longitude: data.longitude,
-        googleMapsUrl: data.googleMapsUrl || null,
-      },
-      include: { category: true },
-    });
-  }
+    if (!loc) return null;
 
-  static async updateLocation(id: bigint, data: Partial<CreateMapLocationDTO>) {
-    const updateData: any = {};
-    if (data.name !== undefined) updateData.name = data.name;
-    if (data.shortDescription !== undefined) updateData.shortDescription = data.shortDescription;
-    if (data.imageUrl !== undefined) updateData.imageUrl = data.imageUrl;
-    if (data.address !== undefined) updateData.address = data.address;
-    if (data.latitude !== undefined) updateData.latitude = data.latitude;
-    if (data.longitude !== undefined) updateData.longitude = data.longitude;
-    if (data.googleMapsUrl !== undefined) updateData.googleMapsUrl = data.googleMapsUrl;
-    if (data.mapCategoryId !== undefined) updateData.mapCategoryId = BigInt(data.mapCategoryId);
-
-    return prisma.mapLocation.update({
-      where: { id },
-      data: updateData,
-      include: { category: true },
-    });
-  }
-
-  static async deleteLocation(id: bigint) {
-    return prisma.mapLocation.delete({
-      where: { id },
-    });
-  }
-
-  static async createCategory(data: CreateMapCategoryDTO) {
-    return prisma.mapCategory.create({
-      data: {
-        name: data.name,
-        slug: data.slug,
-        icon: data.icon || null,
-        color: data.color || null,
-      },
-    });
-  }
-
-  static async updateCategory(id: bigint, data: Partial<CreateMapCategoryDTO>) {
-    return prisma.mapCategory.update({
-      where: { id },
-      data,
-    });
-  }
-
-  static async deleteCategory(id: bigint) {
-    return prisma.mapCategory.delete({
-      where: { id },
-    });
+    return {
+      id: loc.id.toString(),
+      name: loc.name,
+      slug: loc.slug,
+      categoryName: loc.category?.name || "UMKM",
+      latitude: Number(loc.latitude),
+      longitude: Number(loc.longitude),
+      address: loc.address,
+      mapsUrl: loc.mapsUrl,
+      coverUrl: loc.coverUrl || "/images/placeholder-umkm.jpg",
+    };
   }
 }

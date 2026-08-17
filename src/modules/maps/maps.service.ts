@@ -1,5 +1,9 @@
-import { MapsRepository, CreateMapLocationDTO, CreateMapCategoryDTO } from "./maps.repository";
+import { MapsRepository } from "./maps.repository";
 import { NotFoundError, ValidationError } from "../../shared/errors/app-error";
+import { prisma } from "../../shared/db/client";
+import { generateCategorySlug, generateUmkmSlug } from "../../shared/utils/slug";
+
+// Maps service powered by Umkm geographic coordinates
 
 export class MapsService {
   static async getCategories() {
@@ -34,38 +38,118 @@ export class MapsService {
     return location;
   }
 
-  static async createLocation(dto: CreateMapLocationDTO) {
-    if (!dto.name || !dto.latitude || !dto.longitude || !dto.mapCategoryId) {
-      throw new ValidationError("Nama, latitude, longitude, dan kategori wajib diisi");
-    }
-    return MapsRepository.createLocation(dto);
-  }
-
-  static async updateLocation(idStr: string, dto: Partial<CreateMapLocationDTO>) {
-    const location = await this.getLocationById(idStr);
-    return MapsRepository.updateLocation(location.id, dto);
-  }
-
-  static async deleteLocation(idStr: string) {
-    const location = await this.getLocationById(idStr);
-    return MapsRepository.deleteLocation(location.id);
-  }
-
-  static async createCategory(dto: CreateMapCategoryDTO) {
-    if (!dto.name) {
+  static async createCategory(data: { name: string; slug?: string; description?: string }) {
+    if (!data.name) {
       throw new ValidationError("Nama kategori wajib diisi");
     }
-    const slug = dto.slug || dto.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-    return MapsRepository.createCategory({ ...dto, slug });
+    const slug = data.slug || (await generateCategorySlug(data.name));
+    return prisma.umkmCategory.create({
+      data: {
+        name: data.name,
+        slug,
+        description: data.description || null,
+      },
+    });
   }
 
-  static async updateCategory(idStr: string, dto: Partial<CreateMapCategoryDTO>) {
-    const id = BigInt(idStr);
-    return MapsRepository.updateCategory(id, dto);
+  static async updateCategory(idStr: string, data: { name?: string; slug?: string; description?: string }) {
+    let id: bigint;
+    try {
+      id = BigInt(idStr);
+    } catch {
+      throw new NotFoundError("ID kategori tidak valid");
+    }
+    return prisma.umkmCategory.update({
+      where: { id },
+      data,
+    });
   }
 
   static async deleteCategory(idStr: string) {
-    const id = BigInt(idStr);
-    return MapsRepository.deleteCategory(id);
+    let id: bigint;
+    try {
+      id = BigInt(idStr);
+    } catch {
+      throw new NotFoundError("ID kategori tidak valid");
+    }
+    return prisma.umkmCategory.delete({
+      where: { id },
+    });
+  }
+
+  static async createLocation(data: any) {
+    if (!data.name || data.latitude === undefined || data.longitude === undefined) {
+      throw new ValidationError("Nama, latitude, dan longitude wajib diisi");
+    }
+
+    let categoryId = data.categoryId || data.mapCategoryId || data.umkmCategoryId;
+    let finalCategoryId: bigint;
+
+    if (!categoryId) {
+      const defaultCat = await prisma.umkmCategory.findFirst();
+      if (!defaultCat) {
+        const createdCat = await prisma.umkmCategory.create({
+          data: { name: "UMKM", slug: "umkm" },
+        });
+        finalCategoryId = createdCat.id;
+      } else {
+        finalCategoryId = defaultCat.id;
+      }
+    } else {
+      finalCategoryId = BigInt(categoryId);
+    }
+
+    const slug = await generateUmkmSlug(data.name);
+
+    return prisma.umkm.create({
+      data: {
+        name: data.name,
+        slug,
+        ownerName: data.ownerName || data.name,
+        description: data.description || data.shortDescription || "",
+        phone: data.phone || "081234567890",
+        address: data.address || "Desa Pringgodani",
+        latitude: Number(data.latitude),
+        longitude: Number(data.longitude),
+        mapsUrl: data.googleMapsUrl || data.mapsUrl || null,
+        coverUrl: data.imageUrl || data.coverUrl || "/images/placeholder-umkm.jpg",
+        status: "APPROVED",
+        umkmCategoryId: finalCategoryId,
+      },
+    });
+  }
+
+  static async updateLocation(idStr: string, data: any) {
+    let id: bigint;
+    try {
+      id = BigInt(idStr);
+    } catch {
+      throw new NotFoundError("ID lokasi tidak valid");
+    }
+
+    const updateData: any = {};
+    if (data.name) updateData.name = data.name;
+    if (data.description || data.shortDescription) updateData.description = data.description || data.shortDescription;
+    if (data.address) updateData.address = data.address;
+    if (data.latitude !== undefined) updateData.latitude = Number(data.latitude);
+    if (data.longitude !== undefined) updateData.longitude = Number(data.longitude);
+    if (data.mapsUrl || data.googleMapsUrl) updateData.mapsUrl = data.mapsUrl || data.googleMapsUrl;
+    if (data.coverUrl || data.imageUrl) updateData.coverUrl = data.coverUrl || data.imageUrl;
+
+    return prisma.umkm.update({
+      where: { id },
+      data: updateData,
+    });
+  }
+
+  static async deleteLocation(idStr: string) {
+    let id: bigint;
+    try {
+      id = BigInt(idStr);
+    } catch {
+      throw new NotFoundError("ID lokasi tidak valid");
+    }
+
+    return prisma.umkm.delete({ where: { id } });
   }
 }

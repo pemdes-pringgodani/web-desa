@@ -1,5 +1,5 @@
 datasource db {
-  provider  = "postgresql"
+  provider = "postgresql"
 }
 
 generator client {
@@ -7,135 +7,205 @@ generator client {
 }
 
 // =====================================
-// ARTICLE
+// A. SYSTEM / AUTH
 // =====================================
 
-model ArticleDetail {
-  id        BigInt         @id @default(autoincrement())
-  newsId    BigInt         @map("news_id")
-  title     String         @db.VarChar(256)
-  coverUrl  String         @map("cover_url") @db.Text
-  
-  news      News           @relation(fields: [newsId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "article_news_fk")
-  blocks    ArticleBlock[]
+model Role {
+  id          BigInt  @id @default(autoincrement())
+  name        String  @db.VarChar(256)
+  description String? @db.VarChar(256)
 
-  @@index([newsId], map: "article_detail_news_idx")
-  @@map("article_detail")
+  users       User[]
+
+  @@map("roles")
 }
 
-model ArticleBlock {
-  id              BigInt        @id @default(autoincrement())
-  articleDetailId BigInt        @map("article_detail_id")
-  subHeading      String?       @map("sub_heading") @db.VarChar(256)
-  content         String        @db.Text
-  imageUrl        String?       @map("image_url") @db.Text
-  sortOrder       Int           @map("sort_order")
+model User {
+  id        String    @id @db.Uuid
+  roleId    BigInt    @map("role_id")
+  name      String    @db.VarChar(256)
+  email     String    @unique(map: "users_email_uq") @db.VarChar(256)
+  lastLogin DateTime? @map("last_login") @db.Timestamptz
 
-  articleDetail   ArticleDetail @relation(fields: [articleDetailId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "article_block_fk")
+  role      Role      @relation(fields: [roleId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "user_role_fk")
 
-  @@index([articleDetailId], map: "article_block_detail_idx")
-  @@map("article_block")
+  @@index([roleId], map: "users_role_idx")
+  @@map("users")
 }
 
 // =====================================
-// GALLERY
+// B. WEBSITE / IDENTITAS DESA
 // =====================================
 
-model GalleryDetail {
-  id        BigInt         @id @default(autoincrement())
-  newsId    BigInt         @map("news_id")
-  title     String         @db.VarChar(256)
-  coverUrl  String         @map("cover_url") @db.Text
+model WebsiteSetting {
+  id          BigInt  @id @default(autoincrement())
+  websiteName String? @map("website_name") @db.VarChar(256)
+  logoUrl     String  @map("logo_url") @db.Text
+  faviconUrl  String  @map("favicon_url") @db.Text
+  email       String  @db.VarChar(256)
+  phone       String  @db.VarChar(256)
+  address     String  @db.VarChar(256)
+  facebook    String? @db.VarChar(256)
+  instagram   String? @db.VarChar(256)
+  youtube     String? @db.VarChar(256)
+  tiktok      String? @db.VarChar(256)
 
-  news      News           @relation(fields: [newsId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "gallery_news_fk")
-  images    GalleryImage[]
-
-  @@index([newsId], map: "gallery_detail_news_idx")
-  @@map("gallery_detail")
+  @@map("website_setting")
 }
 
-model GalleryImage {
-  id               BigInt        @id @default(autoincrement())
-  galleryDetailId  BigInt        @map("gallery_detail_id")
-  imageUrl         String        @map("image_url") @db.Text
-  imageDescription String?       @map("image_description") @db.VarChar(256)
-  sortOrder        Int           @map("sort_order")
+model VillageProfile {
+  id           BigInt            @id @default(autoincrement())
+  villageName  String            @map("village_name") @db.VarChar(256)
+  headGreeting String            @map("head_greeting") @db.Text
+  headPhoto    String            @map("head_photo") @db.Text
+  address      String            @db.VarChar(256)
+  phone        String            @db.VarChar(256)
+  email        String?           @db.VarChar(256)
+  updatedAt    DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
-  galleryDetail    GalleryDetail @relation(fields: [galleryDetailId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "gallery_image_fk")
+  officials    VillageOfficial[]
 
-  @@index([galleryDetailId], map: "gallery_image_detail_idx")
-  @@map("gallery_image")
+  @@map("village_profile")
 }
 
-// =====================================
-// VILLAGE HISTORY
-// =====================================
-
-model VillageHistory {
-  id               BigInt          @id @default(autoincrement())
-  villageProfileId BigInt          @map("village_profile_id")
-  title            String?         @db.VarChar(256)
-  sortOrder        Int             @map("sort_order")
-
-  villageProfile   VillageProfile  @relation(fields: [villageProfileId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "history_profile_fk")
-  details          HistoryDetail[]
-
-  @@index([villageProfileId], map: "village_history_profile_idx")
-  @@map("village_history")
-}
-
-model HistoryDetail {
+model VillageOfficial {
   id               BigInt         @id @default(autoincrement())
-  villageHistoryId BigInt         @map("village_history_id")
-  content          String         @db.Text
-  imageUrl         String?        @map("image_url") @db.Text
-  sortOrder        Int            @map("sort_order")
+  villageProfileId BigInt         @map("village_profile_id")
+  name             String         @db.VarChar(256)
+  position         String         @db.VarChar(256)
+  photoUrl         String         @map("photo_url") @db.Text
+  email            String?        @db.VarChar(256)
+  greeting         String?        @db.VarChar(256)
 
-  villageHistory   VillageHistory @relation(fields: [villageHistoryId], references: [id])
+  villageProfile   VillageProfile @relation(fields: [villageProfileId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "official_profile_fk")
 
-  @@map("history_detail")
+  @@index([villageProfileId], map: "village_official_profile_idx")
+  @@map("village_officials")
 }
 
 // =====================================
-// MAP
+// C. VILLAGE POTENTIAL
 // =====================================
 
-model MapCategory {
-  id        BigInt        @id @default(autoincrement())
-  name      String        @db.VarChar(256)
-  slug      String        @unique(map: "map_category_slug_uq") @db.VarChar(256)
-  icon      String?       @db.VarChar(256)
-  color     String?       @db.VarChar(10)
+model VillagePotentialCategory {
+  id          BigInt             @id @default(autoincrement())
+  name        String             @db.VarChar(256)
+  slug        String             @unique(map: "potential_category_slug_uq") @db.VarChar(256)
+  description String?            @db.Text
 
-  locations MapLocation[]
+  potentials  VillagePotential[]
 
-  @@map("map_category")
+  @@map("village_potential_category")
 }
 
-model MapLocation {
-  id               BigInt      @id @default(autoincrement())
-  mapCategoryId    BigInt      @map("map_category_id")
-  name             String      @db.VarChar(256)
-  shortDescription String?     @map("short_description") @db.VarChar(156)
-  imageUrl         String?     @map("image_url") @db.Text
-  address          String?     @db.VarChar(256)
-  latitude         Decimal     @db.Decimal(10, 8)
-  longitude        Decimal     @db.Decimal(11, 8)
-  googleMapsUrl    String?     @map("google_maps_url") @db.VarChar(512)
+model VillagePotential {
+  id                         BigInt                   @id @default(autoincrement())
+  villagePotentialCategoryId BigInt                   @map("village_potential_category_id")
+  name                       String                   @db.VarChar(256)
+  slug                       String                   @unique(map: "village_potential_slug_uq") @db.VarChar(256)
+  summary                    String                   @db.Text
+  description                String?                  @db.Text
+  coverUrl                   String                   @map("cover_url") @db.Text
 
-  category         MapCategory @relation(fields: [mapCategoryId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "map_category_fk")
+  category                   VillagePotentialCategory @relation(fields: [villagePotentialCategoryId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "potential_category_fk")
+  
+  umkms                      Umkm[]
+  newsPotentials             NewsPotential[]
 
-  @@index([mapCategoryId], map: "map_location_category_idx")
-  @@map("map_location")
+  @@index([villagePotentialCategoryId], map: "potential_category_idx")
+  @@map("village_potential")
 }
 
 // =====================================
-// NEWS
+// D. UMKM
+// =====================================
+
+model UmkmCategory {
+  id          BigInt  @id @default(autoincrement())
+  name        String  @db.VarChar(256)
+  slug        String  @unique(map: "umkm_category_slug_uq") @db.VarChar(256)
+  description String? @db.Text
+
+  umkms       Umkm[]
+
+  @@map("umkm_category")
+}
+
+model Umkm {
+  id                 BigInt            @id @default(autoincrement())
+  umkmCategoryId     BigInt            @map("umkm_category_id")
+  villagePotentialId BigInt?           @map("village_potential_id")
+  name               String            @db.VarChar(256)
+  slug               String            @unique(map: "umkm_slug_uq") @db.VarChar(256)
+  ownerName          String            @map("owner_name") @db.VarChar(256)
+  description        String            @db.Text
+  phone              String            @db.VarChar(20)
+  email              String?           @db.VarChar(256)
+  address            String            @db.VarChar(256)
+  coverUrl           String?           @map("cover_url") @db.Text
+  latitude           Decimal?          @db.Decimal(10, 8)
+  longitude          Decimal?          @db.Decimal(11, 8)
+  mapsUrl            String?           @map("maps_url") @db.VarChar(512)
+  openDay            String?           @map("open_day") @db.VarChar(256)
+  startTime          DateTime?         @map("start_time") @db.Time
+  endTime            DateTime?         @map("end_time") @db.Time
+  since              Int?
+  status             String            @db.VarChar(50)
+  rejectionReason    String?           @map("rejection_reason") @db.Text
+  publishedAt        DateTime?         @map("published_at") @db.Timestamptz
+
+  category           UmkmCategory      @relation(fields: [umkmCategoryId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "umkm_category_fk")
+  potential          VillagePotential? @relation(fields: [villagePotentialId], references: [id], onDelete: SetNull, onUpdate: NoAction, map: "umkm_potential_fk")
+  
+  products           Product[]
+  galleries          UmkmGallery[]
+  newsUmkms          NewsUmkm[]
+
+  @@index([umkmCategoryId], map: "umkm_category_idx")
+  @@index([villagePotentialId], map: "umkm_potential_idx")
+  @@index([status], map: "umkm_status_idx")
+  @@map("umkm")
+}
+
+model UmkmGallery {
+  id       BigInt  @id @default(autoincrement())
+  umkmId   BigInt  @map("umkm_id")
+  imageUrl String  @map("image_url") @db.Text
+  caption  String? @db.VarChar(256)
+
+  umkm     Umkm    @relation(fields: [umkmId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "umkm_gallery_fk")
+
+  @@index([umkmId], map: "umkm_gallery_idx")
+  @@map("umkm_gallery")
+}
+
+// =====================================
+// E. PRODUCT
+// =====================================
+
+model Product {
+  id           BigInt        @id @default(autoincrement())
+  umkmId       BigInt        @map("umkm_id")
+  name         String        @db.VarChar(256)
+  imageUrl     String?       @map("image_url") @db.Text
+  description  String        @db.Text
+  price        Decimal?      @db.Decimal(12, 2)
+
+  umkm         Umkm          @relation(fields: [umkmId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "product_umkm_fk")
+  newsProducts NewsProduct[]
+
+  @@index([umkmId], map: "product_umkm_idx")
+  @@map("product")
+}
+
+// =====================================
+// F. NEWS
 // =====================================
 
 model NewsCategory {
   id          BigInt  @id @default(autoincrement())
   name        String  @db.VarChar(50)
+  slug        String  @unique(map: "news_category_slug_uq") @db.VarChar(256)
   description String? @db.VarChar(256)
 
   news        News[]
@@ -155,282 +225,121 @@ model NewsType {
 }
 
 model News {
-  id                 BigInt            @id @default(autoincrement())
-  newsCategoryId     BigInt            @map("news_category_id")
-  newsTypeId         BigInt            @map("news_type_id")
-  villagePotentialId BigInt?           @map("village_potential_id")
-  title              String            @db.VarChar(256)
-  slug               String            @unique(map: "news_slug_uq") @db.VarChar(256)
-  excerpt            String            @db.Text
-  status             String            @db.VarChar(15)
-  rejectionReason    String?           @map("rejection_reason") @db.Text
-  publishedAt        DateTime?         @map("published_at") @db.Timestamptz
+  id              BigInt          @id @default(autoincrement())
+  newsCategoryId  BigInt          @map("news_category_id")
+  newsTypeId      BigInt          @map("news_type_id")
+  title           String          @db.VarChar(256)
+  slug            String          @unique(map: "news_slug_uq") @db.VarChar(256)
+  excerpt         String          @db.Text
+  coverUrl        String?         @map("cover_url") @db.Text
+  status          String          @db.VarChar(15)
+  rejectionReason String?         @map("rejection_reason") @db.Text
+  publishedAt     DateTime?       @map("published_at") @db.Timestamptz
 
-  category           NewsCategory      @relation(fields: [newsCategoryId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "news_category_fk")
-  type               NewsType          @relation(fields: [newsTypeId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "news_type_fk")
-  potential          VillagePotential? @relation(fields: [villagePotentialId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "news_potential_fk")
+  category        NewsCategory    @relation(fields: [newsCategoryId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "news_category_fk")
+  type            NewsType        @relation(fields: [newsTypeId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "news_type_fk")
   
-  articleDetails     ArticleDetail[]
-  galleryDetails     GalleryDetail[]
+  articleDetail   ArticleDetail?
+  galleryDetail   GalleryDetail?
+  
+  newsUmkms       NewsUmkm[]
+  newsProducts    NewsProduct[]
+  newsPotentials  NewsPotential[]
 
   @@index([newsCategoryId], map: "news_category_idx")
   @@index([newsTypeId], map: "news_type_idx")
-  @@index([villagePotentialId], map: "news_potential_idx")
   @@index([status], map: "news_status_idx")
   @@index([publishedAt(sort: Desc)], map: "news_published_idx")
   @@map("news")
 }
 
 // =====================================
-// VILLAGE POTENTIAL
+// G. ARTICLE & GALLERY DETAIL
 // =====================================
 
-model VillagePotentialCategory {
-  id         BigInt             @id @default(autoincrement())
-  name       String             @db.VarChar(256)
-  slug       String             @unique(map: "potential_category_slug_uq") @db.VarChar(256)
+model ArticleDetail {
+  id       BigInt         @id @default(autoincrement())
+  newsId   BigInt         @unique(map: "article_detail_news_uq") @map("news_id")
 
-  potentials VillagePotential[]
+  news     News           @relation(fields: [newsId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "article_news_fk")
+  blocks   ArticleBlock[]
 
-  @@map("village_potential_category")
+  @@map("article_detail")
 }
 
-model VillagePotential {
-  id                         BigInt                   @id @default(autoincrement())
-  villagePotentialCategoryId BigInt                   @map("village_potential_category_id")
-  name                       String                   @db.VarChar(256)
-  summary                    String                   @db.Text
-  coverUrl                   String                   @map("cover_url") @db.Text
-  slug                       String                   @unique(map: "village_potential_slug_uq") @db.VarChar(256)
-
-  category                   VillagePotentialCategory @relation(fields: [villagePotentialCategoryId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "potential_category_fk")
-  
-  news                       News[]
-  articles                   PotentialArticle[]
-  umkms                      Umkm[]
-
-  @@index([villagePotentialCategoryId], map: "potential_category_idx")
-  @@map("village_potential")
-}
-
-model PotentialArticle {
-  id                 BigInt           @id @default(autoincrement())
-  villagePotentialId BigInt           @map("village_potential_id")
-  imageUrl           String?          @map("image_url") @db.Text
-  content            String           @db.Text
-
-  potential          VillagePotential @relation(fields: [villagePotentialId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "potential_article_fk")
-
-  @@index([villagePotentialId], map: "potential_article_idx")
-  @@map("potential_article")
-}
-
-// =====================================
-// UMKM
-// =====================================
-
-model UmkmCategory {
-  id          BigInt  @id @default(autoincrement())
-  name        String  @db.VarChar(256)
-  slug        String  @unique(map: "umkm_category_slug_uq") @db.VarChar(256)
-  description String? @db.Text
-
-  umkms       Umkm[]
-
-  @@map("umkm_category")
-}
-
-model Umkm {
-  id                 BigInt            @id @default(autoincrement())
-  umkmCategoryId     BigInt            @map("umkm_category_id")
-  villagePotentialId BigInt?           @map("village_potential_id")
-  name               String            @db.VarChar(256)
-  coverUrl           String?           @map("cover_url") @db.Text
-  slug               String            @unique(map: "umkm_slug_uq") @db.VarChar(256)
-  description        String            @db.Text
-  phone              String            @db.VarChar(15)
-  email              String?           @db.VarChar(256)
-  address            String            @db.VarChar(256)
-  latitude           Decimal?          @db.Decimal(10, 8)
-  longitude          Decimal?          @db.Decimal(11, 8)
-  googlePlaceId      String?           @map("google_place_id") @db.VarChar(256)
-  openDay            String?           @map("open_day") @db.VarChar(256)
-  startTime          DateTime?         @map("start_time") @db.Time
-  endTime            DateTime?         @map("end_time") @db.Time
-  ownerName          String            @map("owner_name") @db.VarChar(256)
-  since              Int?
-  status             String            @db.VarChar(50)
-  rejectionReason    String?           @map("rejection_reason") @db.Text
-
-  category           UmkmCategory      @relation(fields: [umkmCategoryId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "umkm_category_fk")
-  potential          VillagePotential? @relation(fields: [villagePotentialId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "umkm_potential_fk")
-  
-  products           Product[]
-  galleries          UmkmGallery[]
-
-  @@index([umkmCategoryId], map: "umkm_category_idx")
-  @@index([villagePotentialId], map: "umkm_potential_idx")
-  @@map("umkm")
-}
-
-model UmkmGallery {
-  id        BigInt  @id @default(autoincrement())
-  umkmId    BigInt  @map("umkm_id")
-  caption   String? @db.VarChar(256)
-  imageUrl  String  @map("image_url") @db.Text
-
-  umkm      Umkm    @relation(fields: [umkmId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "umkm_gallery_fk")
-
-  @@index([umkmId], map: "umkm_gallery_idx")
-  @@map("umkm_gallery")
-}
-
-model Product {
-  id          BigInt   @id @default(autoincrement())
-  umkmId      BigInt   @map("umkm_id")
-  name        String   @db.VarChar(256)
-  imageUrl    String?  @map("image_url") @db.Text
-  description String   @db.Text
-  price       Decimal? @db.Decimal(12, 2)
-
-  umkm        Umkm     @relation(fields: [umkmId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "product_umkm_fk")
-
-  @@index([umkmId], map: "product_umkm_idx")
-  @@map("product")
-}
-
-// =====================================
-// USER & ROLE
-// =====================================
-
-model Role {
-  id          BigInt  @id @default(autoincrement())
-  name        String  @db.VarChar(256)
-  description String? @db.VarChar(256)
-
-  users       User[]
-
-  @@map("roles")
-}
-
-model User {
-  id        String    @id @db.Uuid
-  roleId    BigInt    @map("role_id")
-  name      String    @db.VarChar(256)
-  email     String    @unique(map: "users_email_uq") @db.VarChar(256)
-  lastLogin DateTime? @map("last_login") @db.Timestamptz
-  apiMap    String?   @map("api_map") @db.Text
-
-  role      Role      @relation(fields: [roleId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "user_role_fk")
-
-  @@index([roleId], map: "users_role_idx")
-  @@map("users")
-}
-
-// =====================================
-// VILLAGE PROFILE
-// =====================================
-
-model VillageVision {
-  id       BigInt           @id @default(autoincrement())
-  vision   String           @db.VarChar(256)
-
-  profiles VillageProfile[]
-  missions VillageMission[]
-
-  @@map("village_vision")
-}
-
-model VillageProfile {
-  id                BigInt              @id @default(autoincrement())
-  villageVisionId   BigInt              @map("village_vision_id")
-  structureImageUrl String              @map("structure_image_url") @db.Text
-  address           String              @db.VarChar(256)
-  phone             String              @db.VarChar(15)
-  email             String?             @db.VarChar(256)
-
-  vision            VillageVision       @relation(fields: [villageVisionId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "profile_vision_fk")
-  histories         VillageHistory[]
-  officials         VillageOfficial[]
-  statisticProfiles StatisticProfile[]
-
-  @@map("village_profiles")
-}
-
-model VillageMission {
+model ArticleBlock {
   id              BigInt        @id @default(autoincrement())
-  villageVisionId BigInt        @map("village_vision_id")
-  mission         String        @db.VarChar(256)
+  articleDetailId BigInt        @map("article_detail_id")
+  subHeading      String?       @map("sub_heading") @db.VarChar(256)
+  content         String        @db.Text
+  imageUrl        String?       @map("image_url") @db.Text
   sortOrder       Int           @map("sort_order")
 
-  vision          VillageVision @relation(fields: [villageVisionId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "mission_vision_fk")
+  articleDetail   ArticleDetail @relation(fields: [articleDetailId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "article_block_fk")
 
-  @@map("village_mission")
+  @@index([articleDetailId], map: "article_block_detail_idx")
+  @@map("article_block")
 }
 
-model VillageOfficial {
-  id               BigInt         @id @default(autoincrement())
-  villageProfileId BigInt         @map("village_profile_id")
-  name             String         @db.VarChar(256)
-  position         String         @db.VarChar(256)
-  photoUrl         String         @map("photo_url") @db.Text
-  email            String?        @db.VarChar(256)
-  greeting         String?        @db.VarChar(256)
+model GalleryDetail {
+  id       BigInt         @id @default(autoincrement())
+  newsId   BigInt         @unique(map: "gallery_detail_news_uq") @map("news_id")
 
-  villageProfile   VillageProfile @relation(fields: [villageProfileId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "official_profile_fk")
+  news     News           @relation(fields: [newsId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "gallery_news_fk")
+  images   GalleryImage[]
 
-  @@index([villageProfileId], map: "village_official_profile_idx")
-  @@map("village_officials")
+  @@map("gallery_detail")
 }
 
-// =====================================
-// STATISTICS
-// =====================================
+model GalleryImage {
+  id               BigInt        @id @default(autoincrement())
+  galleryDetailId  BigInt        @map("gallery_detail_id")
+  imageUrl         String        @map("image_url") @db.Text
+  imageDescription String?       @map("image_description") @db.VarChar(256)
+  sortOrder        Int           @map("sort_order")
 
-model StatisticProfile {
-  id               BigInt              @id @default(autoincrement())
-  villageProfileId BigInt              @map("village_profile_id")
-  title            String              @db.VarChar(256)
-  description      String              @db.Text
-  sortOrder        Int?                @map("sort_order")
+  galleryDetail    GalleryDetail @relation(fields: [galleryDetailId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "gallery_image_fk")
 
-  villageProfile   VillageProfile      @relation(fields: [villageProfileId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "statistic_profile_fk")
-  statistics       VillageStatistic[]
-
-  @@index([villageProfileId], map: "statistic_profile_village_idx")
-  @@map("statistic_profiles")
-}
-
-model VillageStatistic {
-  id                 BigInt           @id @default(autoincrement())
-  statisticProfileId BigInt           @map("statistic_profile_id")
-  label              String           @db.VarChar(256)
-  value              String           @db.VarChar(256)
-  unit               String           @db.VarChar(256)
-  sortOrder          Int              @map("sort_order")
-
-  statisticProfile   StatisticProfile @relation(fields: [statisticProfileId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "village_statistic_fk")
-
-  @@index([statisticProfileId], map: "village_statistics_profile_idx")
-  @@map("village_statistics")
+  @@index([galleryDetailId], map: "gallery_image_detail_idx")
+  @@map("gallery_image")
 }
 
 // =====================================
-// WEBSITE SETTING
+// H. NEWS RELATIONS (N:N)
 // =====================================
 
-model WebsiteSetting {
-  id          BigInt  @id @default(autoincrement())
-  websiteName String? @map("website_name") @db.VarChar(256)
-  logoUrl     String  @map("logo_url") @db.Text
-  faviconUrl  String  @map("favicon_url") @db.Text
-  email       String  @db.VarChar(256)
-  phone       String  @db.VarChar(256)
-  address     String  @db.VarChar(256)
-  facebook    String? @db.VarChar(256)
-  instagram   String? @db.VarChar(256)
-  youtube     String? @db.VarChar(256)
-  tiktok      String? @db.VarChar(256)
+model NewsUmkm {
+  newsId BigInt @map("news_id")
+  umkmId BigInt @map("umkm_id")
 
-  @@map("website_setting")
+  news   News   @relation(fields: [newsId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "news_umkm_news_fk")
+  umkm   Umkm   @relation(fields: [umkmId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "news_umkm_umkm_fk")
+
+  @@id([newsId, umkmId])
+  @@index([umkmId], map: "news_umkm_umkm_idx")
+  @@map("news_umkm")
+}
+
+model NewsProduct {
+  newsId    BigInt  @map("news_id")
+  productId BigInt  @map("product_id")
+
+  news      News    @relation(fields: [newsId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "news_product_news_fk")
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "news_product_product_fk")
+
+  @@id([newsId, productId])
+  @@index([productId], map: "news_product_product_idx")
+  @@map("news_product")
+}
+
+model NewsPotential {
+  newsId      BigInt           @map("news_id")
+  potentialId BigInt           @map("potential_id")
+
+  news        News             @relation(fields: [newsId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "news_potential_news_fk")
+  potential   VillagePotential @relation(fields: [potentialId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "news_potential_potential_fk")
+
+  @@id([newsId, potentialId])
+  @@index([potentialId], map: "news_potential_potential_idx")
+  @@map("news_potential")
 }

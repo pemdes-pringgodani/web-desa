@@ -34,17 +34,12 @@ export async function POST(request: Request) {
 
     let profile = await prisma.villageProfile.findFirst();
     if (!profile) {
-      let vision = await prisma.villageVision.findFirst();
-      if (!vision) {
-        vision = await prisma.villageVision.create({
-          data: { vision: "Mewujudkan Desa Mandiri" },
-        });
-      }
       profile = await prisma.villageProfile.create({
         data: {
-          villageVisionId: vision.id,
-          structureImageUrl: "",
-          address: "Desa Pringgodani",
+          villageName: "Desa Pringgodani",
+          headGreeting: "Selamat datang di portal LokalUMKM Desa Pringgodani.",
+          headPhoto: "/images/kepala-desa.jpg",
+          address: "Jl. Raya Desa Pringgodani No. 1, Bantur, Malang",
           phone: "081234567890",
         },
       });

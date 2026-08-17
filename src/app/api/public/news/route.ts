@@ -12,6 +12,8 @@ export async function GET(request: Request) {
     const search = searchParams.get("search") || searchParams.get("q") || undefined;
     const exclude = searchParams.get("exclude") || undefined;
     const status = searchParams.get("status") || "PUBLISHED";
+    const umkmSlug = searchParams.get("umkmSlug") || searchParams.get("umkm") || undefined;
+    const potentialSlug = searchParams.get("potentialSlug") || searchParams.get("potential") || undefined;
 
     const news = await NewsService.getAllNews({
       page,
@@ -21,9 +23,11 @@ export async function GET(request: Request) {
       search,
       exclude,
       status,
+      umkmSlug,
+      potentialSlug,
     });
     const response = ApiResponse.success(news);
-    response.headers.set("Cache-Control", "public, s-maxage=300, stale-while-revalidate=600");
+    response.headers.set("Cache-Control", "public, s-maxage=120, stale-while-revalidate=300");
     return response;
   } catch (error: any) {
     if (error instanceof AppError) {

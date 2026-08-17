@@ -10,12 +10,15 @@ export interface BannerDto {
 
 export class BannerService {
   static async getActiveBanners() {
-    // Fetch latest published news with article or gallery cover from PostgreSQL database
     const newsItems = await prisma.news.findMany({
       where: { status: "PUBLISHED" },
       include: {
-        articleDetails: true,
-        galleryDetails: true,
+        articleDetail: {
+          include: { blocks: true },
+        },
+        galleryDetail: {
+          include: { images: true },
+        },
       },
       orderBy: { publishedAt: "desc" },
       take: 5,
@@ -24,16 +27,19 @@ export class BannerService {
     const items: BannerDto[] = [];
 
     newsItems.forEach((n, idx) => {
-      const cover = n.articleDetails[0]?.coverUrl || n.galleryDetails[0]?.coverUrl;
-      if (cover) {
-        items.push({
-          id: `banner-news-${n.id}`,
-          title: n.title,
-          imageUrl: cover,
-          linkUrl: `/berita/${n.slug}`,
-          order: idx,
-        });
-      }
+      const cover =
+        n.coverUrl ||
+        n.articleDetail?.blocks?.find((b) => b.imageUrl)?.imageUrl ||
+        n.galleryDetail?.images?.[0]?.imageUrl ||
+        "/images/placeholder-news.jpg";
+
+      items.push({
+        id: `banner-news-${n.id}`,
+        title: n.title,
+        imageUrl: cover,
+        linkUrl: `/berita/${n.slug}`,
+        order: idx,
+      });
     });
 
     return { items };

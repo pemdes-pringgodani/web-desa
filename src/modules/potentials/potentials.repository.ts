@@ -5,6 +5,11 @@ export class PotentialsRepository {
     const raw = await prisma.villagePotential.findMany({
       include: {
         category: true,
+        _count: {
+          select: {
+            umkms: { where: { status: "APPROVED" } },
+          },
+        },
       },
       orderBy: {
         name: "asc",
@@ -14,10 +19,15 @@ export class PotentialsRepository {
     const items = raw.map((p) => ({
       id: p.id.toString(),
       title: p.name,
+      name: p.name,
       slug: p.slug,
       category: p.category?.name || "Pertanian",
       overview: p.summary,
+      summary: p.summary,
+      description: p.description || p.summary,
+      coverUrl: p.coverUrl || "/images/placeholder-potensi.jpg",
       coverImage: p.coverUrl || "/images/placeholder-potensi.jpg",
+      umkmCount: p._count.umkms,
     }));
 
     return { items, total: items.length };
@@ -28,26 +38,26 @@ export class PotentialsRepository {
       where: { slug },
       include: {
         category: true,
-        articles: true,
         umkms: {
+          where: { status: "APPROVED" },
           include: {
             category: true,
             products: true,
           },
         },
-        news: {
+        newsPotentials: {
           include: {
-            category: true,
-            articleDetails: true,
+            news: {
+              include: {
+                category: true,
+              },
+            },
           },
         },
       },
     });
 
     if (!p) return null;
-
-    const description = p.articles.map((a) => a.content).join("\n\n") || p.summary;
-    const gallery = p.articles.map((a) => a.imageUrl).filter(Boolean) as string[];
 
     const relatedUmkm = p.umkms.map((u) => ({
       id: u.id.toString(),
@@ -56,10 +66,13 @@ export class PotentialsRepository {
       category: u.category?.name || "UMKM",
       description: u.description,
       logo: u.coverUrl || "/images/placeholder-umkm.jpg",
+      coverUrl: u.coverUrl || "/images/placeholder-umkm.jpg",
       whatsappNumber: u.phone,
+      phone: u.phone,
       address: u.address,
       ownerName: u.ownerName,
-      publishedAt: new Date().toISOString(),
+      totalProducts: u.products.length,
+      publishedAt: u.publishedAt?.toISOString() || new Date().toISOString(),
     }));
 
     const featuredProducts: any[] = [];
@@ -67,35 +80,44 @@ export class PotentialsRepository {
       u.products.forEach((prod) => {
         featuredProducts.push({
           id: prod.id.toString(),
+          name: prod.name,
           productName: prod.name,
+          description: prod.description,
           price: prod.price ? Number(prod.price) : null,
-          productPhoto: prod.imageUrl,
+          imageUrl: prod.imageUrl || "/images/placeholder-product.jpg",
+          productPhoto: prod.imageUrl || "/images/placeholder-product.jpg",
           umkmName: u.name,
           umkmSlug: u.slug,
         });
       });
     });
 
-    const relatedNews = p.news.map((n) => ({
-      id: n.id.toString(),
-      title: n.title,
-      slug: n.slug,
-      coverImage: n.articleDetails[0]?.coverUrl || "/images/placeholder-news.jpg",
-      categoryName: n.category?.name || "Berita",
-      publishedAt: n.publishedAt ? n.publishedAt.toISOString() : new Date().toISOString(),
-    }));
+    const relatedNews = p.newsPotentials
+      .filter((np) => np.news.status === "PUBLISHED")
+      .map((np) => ({
+        id: np.news.id.toString(),
+        title: np.news.title,
+        slug: np.news.slug,
+        excerpt: np.news.excerpt,
+        coverImage: np.news.coverUrl || "/images/placeholder-news.jpg",
+        coverUrl: np.news.coverUrl || "/images/placeholder-news.jpg",
+        categoryName: np.news.category?.name || "Berita",
+        publishedAt: np.news.publishedAt ? np.news.publishedAt.toISOString() : new Date().toISOString(),
+      }));
 
     return {
       id: p.id.toString(),
       title: p.name,
+      name: p.name,
       slug: p.slug,
       category: p.category?.name || "Pertanian",
       overview: p.summary,
-      description,
+      summary: p.summary,
+      description: p.description || p.summary,
+      coverUrl: p.coverUrl || "/images/placeholder-potensi.jpg",
       coverImage: p.coverUrl || "/images/placeholder-potensi.jpg",
-      gallery,
-      latitude: -7.98,
-      longitude: 112.63,
+      umkmCount: relatedUmkm.length,
+      productCount: featuredProducts.length,
       relatedUmkm,
       featuredProducts,
       relatedNews,

@@ -8,12 +8,12 @@ export class AdminSubmissionsRepository {
         include: {
           category: true,
           type: true,
-          articleDetails: {
+          articleDetail: {
             include: {
               blocks: { orderBy: { sortOrder: "asc" } },
             },
           },
-          galleryDetails: {
+          galleryDetail: {
             include: {
               images: { orderBy: { sortOrder: "asc" } },
             },
@@ -33,12 +33,13 @@ export class AdminSubmissionsRepository {
 
     const newsSubmissions = pendingNews.map((n) => {
       const cover =
-        n.articleDetails[0]?.coverUrl ||
-        n.galleryDetails[0]?.coverUrl ||
+        n.coverUrl ||
+        n.articleDetail?.blocks?.find((b) => b.imageUrl)?.imageUrl ||
+        n.galleryDetail?.images?.[0]?.imageUrl ||
         "/images/placeholder-news.jpg";
 
       const contentBlocks =
-        n.articleDetails[0]?.blocks?.map((b) => ({
+        n.articleDetail?.blocks?.map((b) => ({
           subHeading: b.subHeading || undefined,
           content: b.content,
           imageUrl: b.imageUrl || undefined,
@@ -51,7 +52,7 @@ export class AdminSubmissionsRepository {
         slug: n.slug,
         excerpt: n.excerpt,
         summary: n.excerpt,
-        categoryName: n.category?.name || "Umum",
+        categoryName: n.category?.name || "Kabar UMKM",
         coverUrl: cover,
         coverImage: cover,
         contentBlocks,
@@ -93,33 +94,17 @@ export class AdminSubmissionsRepository {
   static async updateNewsStatus(
     id: string,
     status: "PUBLISHED" | "REJECTED" | "DRAFT",
-    rejectionReason?: string
+    _rejectionReason?: string
   ) {
     const newsId = BigInt(id);
-    const reason = status === "REJECTED" ? rejectionReason || null : null;
 
-    try {
-      return await prisma.news.update({
-        where: { id: newsId },
-        data: {
-          status,
-          rejectionReason: reason,
-        } as any,
-      });
-    } catch (e: any) {
-      try {
-        await prisma.$executeRawUnsafe(
-          `ALTER TABLE "News" ADD COLUMN IF NOT EXISTS "rejection_reason" TEXT`
-        );
-        await prisma.$executeRaw`UPDATE "News" SET "status" = ${status}, "rejection_reason" = ${reason} WHERE "id" = ${newsId}`;
-      } catch {
-        await prisma.news.update({
-          where: { id: newsId },
-          data: { status },
-        });
-      }
-      return prisma.news.findUnique({ where: { id: newsId } });
-    }
+    return prisma.news.update({
+      where: { id: newsId },
+      data: {
+        status,
+        publishedAt: status === "PUBLISHED" ? new Date() : undefined,
+      },
+    });
   }
 
   static async updateUmkmStatus(
@@ -130,27 +115,13 @@ export class AdminSubmissionsRepository {
     const umkmId = BigInt(id);
     const reason = status === "REJECTED" ? rejectionReason || null : null;
 
-    try {
-      return await prisma.umkm.update({
-        where: { id: umkmId },
-        data: {
-          status,
-          rejectionReason: reason,
-        } as any,
-      });
-    } catch (e: any) {
-      try {
-        await prisma.$executeRawUnsafe(
-          `ALTER TABLE "Umkm" ADD COLUMN IF NOT EXISTS "rejection_reason" TEXT`
-        );
-        await prisma.$executeRaw`UPDATE "Umkm" SET "status" = ${status}, "rejection_reason" = ${reason} WHERE "id" = ${umkmId}`;
-      } catch {
-        await prisma.umkm.update({
-          where: { id: umkmId },
-          data: { status },
-        });
-      }
-      return prisma.umkm.findUnique({ where: { id: umkmId } });
-    }
+    return prisma.umkm.update({
+      where: { id: umkmId },
+      data: {
+        status,
+        rejectionReason: reason,
+        publishedAt: status === "APPROVED" ? new Date() : undefined,
+      },
+    });
   }
 }

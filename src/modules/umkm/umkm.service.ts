@@ -4,6 +4,8 @@ import { generateCategorySlug, generateUmkmSlug } from "../../shared/utils/slug"
 import { ValidationError, NotFoundError } from "../../shared/errors/app-error";
 import { prisma } from "../../shared/db/client";
 
+// UMKM service for management and public discovery
+
 export class UmkmService {
   static async getCategories(includeAll = false) {
     const categories = await UmkmRepository.findAllCategories(includeAll);
@@ -37,14 +39,28 @@ export class UmkmService {
       slug: u.slug,
       umkmCategoryId: u.umkmCategoryId.toString(),
       categoryName: u.category?.name || "UMKM",
+      categorySlug: u.category?.slug || "umkm",
       description: u.description,
       phone: u.phone,
+      email: u.email,
       address: u.address,
+      mapsUrl: u.mapsUrl,
       ownerName: u.ownerName,
-      coverUrl: u.coverUrl,
+      coverUrl: u.coverUrl || "/images/placeholder-umkm.jpg",
       status: u.status,
-      galleries: u.galleries.map((g) => g.imageUrl),
+      since: u.since,
+      openDay: u.openDay,
+      startTime: u.startTime ? u.startTime.toISOString().substring(11, 16) : null,
+      endTime: u.endTime ? u.endTime.toISOString().substring(11, 16) : null,
+      latitude: u.latitude ? Number(u.latitude) : null,
+      longitude: u.longitude ? Number(u.longitude) : null,
+      galleries: u.galleries.map((g) => ({
+        id: g.id.toString(),
+        imageUrl: g.imageUrl,
+        caption: g.caption,
+      })),
       products: u.products.map((p) => ({
+        id: p.id.toString(),
         name: p.name,
         price: p.price ? Number(p.price) : 0,
         description: p.description,
@@ -74,11 +90,19 @@ export class UmkmService {
           ownerName: input.ownerName ?? existing.ownerName,
           description: input.description ?? existing.description,
           phone: input.phone ?? existing.phone,
+          email: input.email !== undefined ? input.email : existing.email,
           address: input.address ?? existing.address,
+          mapsUrl: input.mapsUrl !== undefined ? input.mapsUrl : existing.mapsUrl,
           coverUrl: input.coverUrl ?? existing.coverUrl,
           status: input.status ?? existing.status,
+          rejectionReason: input.rejectionReason !== undefined ? input.rejectionReason : existing.rejectionReason,
+          since: input.since !== undefined ? input.since : existing.since,
+          openDay: input.openDay !== undefined ? input.openDay : existing.openDay,
+          startTime: input.startTime ? new Date(`1970-01-01T${input.startTime}:00Z`) : existing.startTime,
+          endTime: input.endTime ? new Date(`1970-01-01T${input.endTime}:00Z`) : existing.endTime,
           latitude: input.latitude !== undefined ? Number(input.latitude) : existing.latitude,
           longitude: input.longitude !== undefined ? Number(input.longitude) : existing.longitude,
+          publishedAt: input.status === "APPROVED" && !existing.publishedAt ? new Date() : existing.publishedAt,
         },
       });
 
@@ -86,9 +110,10 @@ export class UmkmService {
         await tx.umkmGallery.deleteMany({ where: { umkmId: id } });
         if (input.galleries.length > 0) {
           await tx.umkmGallery.createMany({
-            data: input.galleries.map((url: string) => ({
+            data: input.galleries.map((g: any) => ({
               umkmId: id,
-              imageUrl: url,
+              imageUrl: typeof g === "string" ? g : g.imageUrl,
+              caption: typeof g === "string" ? null : g.caption || null,
             })),
           });
         }
@@ -102,7 +127,7 @@ export class UmkmService {
               umkmId: id,
               name: prod.name,
               description: prod.description,
-              price: prod.price,
+              price: prod.price !== undefined && prod.price !== null ? prod.price : null,
               imageUrl: prod.imageUrl || null,
             })),
           });
@@ -225,7 +250,7 @@ export class UmkmService {
           address: data.address,
           latitude: data.latitude,
           longitude: data.longitude,
-          googlePlaceId: data.addressUrl || data.googlePlaceId || null,
+          mapsUrl: data.addressUrl || data.mapsUrl || null,
           since: data.since,
           openDay: data.openDay || null,
           startTime: data.startTime ? new Date(`1970-01-01T${data.startTime}:00Z`) : null,
@@ -250,7 +275,7 @@ export class UmkmService {
             umkmId: umkm.id,
             name: prod.name,
             description: prod.description,
-            price: prod.price,
+            price: prod.price !== undefined && prod.price !== null ? prod.price : null,
             imageUrl: prod.imageUrl || null,
           })),
         });

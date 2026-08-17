@@ -34,6 +34,7 @@ export const registerUmkmSchema = z.object({
   ),
   address: z.string().min(1, "Alamat wajib diisi"),
   addressUrl: z.string().nullable().optional(),
+  mapsUrl: z.string().nullable().optional(),
   googlePlaceId: z.string().nullable().optional(),
   latitude: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? -7.98 : Number(val)),

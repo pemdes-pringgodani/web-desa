@@ -10,22 +10,14 @@ export class OfficialsRepository {
       return existingProfile.id;
     }
 
-    // Auto-create a default Vision and Profile if none exists
-    let vision = await prisma.villageVision.findFirst({ select: { id: true } });
-    if (!vision) {
-      vision = await prisma.villageVision.create({
-        data: { vision: "Terwujudnya Desa yang Maju, Sejahtera, dan Berkelanjutan." },
-        select: { id: true },
-      });
-    }
-
     const newProfile = await prisma.villageProfile.create({
       data: {
-        villageVisionId: vision.id,
-        structureImageUrl: "https://placehold.co/800x600?text=Struktur+Organisasi+Desa",
-        address: "Jl. Raya Desa No. 1",
+        villageName: "Desa Pringgodani",
+        headGreeting: "Selamat datang di portal LokalUMKM Desa Pringgodani.",
+        headPhoto: "/images/kepala-desa.jpg",
+        address: "Jl. Raya Desa Pringgodani No. 1, Bantur, Malang",
         phone: "081234567890",
-        email: "info@desa.id",
+        email: "info@pringgodani.desa.id",
       },
       select: { id: true },
     });

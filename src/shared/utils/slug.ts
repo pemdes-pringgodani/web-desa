@@ -1,4 +1,6 @@
-export async function generateUmkmSlug(name: string, db: any): Promise<string> {
+import { prisma } from "../db/client";
+
+export async function generateUmkmSlug(name: string, db: any = prisma): Promise<string> {
   let baseSlug = name
     .toLowerCase()
     .trim()
@@ -29,7 +31,7 @@ export async function generateUmkmSlug(name: string, db: any): Promise<string> {
   return uniqueSlug;
 }
 
-export async function generateCategorySlug(name: string, db: any): Promise<string> {
+export async function generateCategorySlug(name: string, db: any = prisma): Promise<string> {
   let baseSlug = name
     .toLowerCase()
     .trim()
@@ -60,7 +62,7 @@ export async function generateCategorySlug(name: string, db: any): Promise<strin
   return uniqueSlug;
 }
 
-export async function generateNewsCategorySlug(name: string, db: any): Promise<string> {
+export async function generateNewsCategorySlug(name: string, db: any = prisma): Promise<string> {
   let baseSlug = name
     .toLowerCase()
     .trim()
@@ -91,7 +93,7 @@ export async function generateNewsCategorySlug(name: string, db: any): Promise<s
   return uniqueSlug;
 }
 
-export async function generatePotentialSlug(name: string, db: any): Promise<string> {
+export async function generatePotentialSlug(name: string, db: any = prisma): Promise<string> {
   let baseSlug = name
     .toLowerCase()
     .trim()
@@ -122,7 +124,7 @@ export async function generatePotentialSlug(name: string, db: any): Promise<stri
   return uniqueSlug;
 }
 
-export async function generateNewsSlug(title: string, db: any): Promise<string> {
+export async function generateNewsSlug(title: string, db: any = prisma): Promise<string> {
   let baseSlug = title
     .toLowerCase()
     .trim()
@@ -153,7 +155,7 @@ export async function generateNewsSlug(title: string, db: any): Promise<string> 
   return uniqueSlug;
 }
 
-export async function generateNewsTypeSlug(name: string, db: any): Promise<string> {
+export async function generateNewsTypeSlug(name: string, db: any = prisma): Promise<string> {
   let baseSlug = name
     .toLowerCase()
     .trim()

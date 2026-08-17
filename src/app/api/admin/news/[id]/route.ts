@@ -33,7 +33,7 @@ export async function PUT(
     await requireAdmin();
     const { id } = await context.params;
     const body = await request.json();
-    const data = await NewsRepository.updateNews(id, body);
+    const data = await NewsService.updateNews(id, body);
     return ApiResponse.success(data, "Berita berhasil diperbarui");
   } catch (error: any) {
     if (error instanceof AppError) {
