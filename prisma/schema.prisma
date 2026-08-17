@@ -54,16 +54,17 @@ model WebsiteSetting {
 }
 
 model VillageProfile {
-  id           BigInt            @id @default(autoincrement())
-  villageName  String            @map("village_name") @db.VarChar(256)
-  headGreeting String            @map("head_greeting") @db.Text
-  headPhoto    String            @map("head_photo") @db.Text
-  address      String            @db.VarChar(256)
-  phone        String            @db.VarChar(256)
-  email        String?           @db.VarChar(256)
-  updatedAt    DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  id                BigInt            @id @default(autoincrement())
+  villageName       String            @map("village_name") @db.VarChar(256)
+  headGreeting      String            @map("head_greeting") @db.Text
+  headPhoto         String            @map("head_photo") @db.Text
+  aboutText         String?           @map("about_text") @db.Text
+  address           String            @db.VarChar(256)
+  phone             String            @db.VarChar(256)
+  email             String?           @db.VarChar(256)
+  updatedAt         DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
-  officials    VillageOfficial[]
+  officials         VillageOfficial[]
 
   @@map("village_profile")
 }
@@ -84,40 +85,7 @@ model VillageOfficial {
 }
 
 // =====================================
-// C. VILLAGE POTENTIAL
-// =====================================
-
-model VillagePotentialCategory {
-  id          BigInt             @id @default(autoincrement())
-  name        String             @db.VarChar(256)
-  slug        String             @unique(map: "potential_category_slug_uq") @db.VarChar(256)
-  description String?            @db.Text
-
-  potentials  VillagePotential[]
-
-  @@map("village_potential_category")
-}
-
-model VillagePotential {
-  id                         BigInt                   @id @default(autoincrement())
-  villagePotentialCategoryId BigInt                   @map("village_potential_category_id")
-  name                       String                   @db.VarChar(256)
-  slug                       String                   @unique(map: "village_potential_slug_uq") @db.VarChar(256)
-  summary                    String                   @db.Text
-  description                String?                  @db.Text
-  coverUrl                   String                   @map("cover_url") @db.Text
-
-  category                   VillagePotentialCategory @relation(fields: [villagePotentialCategoryId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "potential_category_fk")
-  
-  umkms                      Umkm[]
-  newsPotentials             NewsPotential[]
-
-  @@index([villagePotentialCategoryId], map: "potential_category_idx")
-  @@map("village_potential")
-}
-
-// =====================================
-// D. UMKM
+// C. UMKM
 // =====================================
 
 model UmkmCategory {
@@ -134,7 +102,6 @@ model UmkmCategory {
 model Umkm {
   id                 BigInt            @id @default(autoincrement())
   umkmCategoryId     BigInt            @map("umkm_category_id")
-  villagePotentialId BigInt?           @map("village_potential_id")
   name               String            @db.VarChar(256)
   slug               String            @unique(map: "umkm_slug_uq") @db.VarChar(256)
   ownerName          String            @map("owner_name") @db.VarChar(256)
@@ -155,14 +122,12 @@ model Umkm {
   publishedAt        DateTime?         @map("published_at") @db.Timestamptz
 
   category           UmkmCategory      @relation(fields: [umkmCategoryId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "umkm_category_fk")
-  potential          VillagePotential? @relation(fields: [villagePotentialId], references: [id], onDelete: SetNull, onUpdate: NoAction, map: "umkm_potential_fk")
   
   products           Product[]
   galleries          UmkmGallery[]
   newsUmkms          NewsUmkm[]
 
   @@index([umkmCategoryId], map: "umkm_category_idx")
-  @@index([villagePotentialId], map: "umkm_potential_idx")
   @@index([status], map: "umkm_status_idx")
   @@map("umkm")
 }
@@ -244,7 +209,6 @@ model News {
   
   newsUmkms       NewsUmkm[]
   newsProducts    NewsProduct[]
-  newsPotentials  NewsPotential[]
 
   @@index([newsCategoryId], map: "news_category_idx")
   @@index([newsTypeId], map: "news_type_idx")
@@ -330,16 +294,4 @@ model NewsProduct {
   @@id([newsId, productId])
   @@index([productId], map: "news_product_product_idx")
   @@map("news_product")
-}
-
-model NewsPotential {
-  newsId      BigInt           @map("news_id")
-  potentialId BigInt           @map("potential_id")
-
-  news        News             @relation(fields: [newsId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "news_potential_news_fk")
-  potential   VillagePotential @relation(fields: [potentialId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "news_potential_potential_fk")
-
-  @@id([newsId, potentialId])
-  @@index([potentialId], map: "news_potential_potential_idx")
-  @@map("news_potential")
 }

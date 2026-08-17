@@ -1,6 +1,7 @@
 import { prisma } from "../../../../../shared/db/client";
 import { ApiResponse } from "../../../../../shared/utils/response";
 import { requireAdmin } from "../../../../../shared/auth/require-admin";
+import { StorageService } from "../../../../../modules/storage/storage.service";
 
 export async function PUT(
   request: Request,
@@ -47,9 +48,18 @@ export async function DELETE(
     const { id } = await params;
     const officialId = BigInt(id);
 
+    const existing = await prisma.villageOfficial.findUnique({
+      where: { id: officialId },
+      select: { photoUrl: true },
+    });
+
     await prisma.villageOfficial.delete({
       where: { id: officialId },
     });
+
+    if (existing?.photoUrl) {
+      await StorageService.deleteFile(existing.photoUrl);
+    }
 
     return ApiResponse.success({ success: true, message: "Perangkat desa berhasil dihapus" });
   } catch (error: any) {

@@ -23,7 +23,6 @@ export class UmkmService {
       where: { id },
       include: {
         category: true,
-        potential: true,
         galleries: true,
         products: true,
       },
@@ -92,7 +91,14 @@ export class UmkmService {
           phone: input.phone ?? existing.phone,
           email: input.email !== undefined ? input.email : existing.email,
           address: input.address ?? existing.address,
-          mapsUrl: input.mapsUrl !== undefined ? input.mapsUrl : existing.mapsUrl,
+          mapsUrl:
+            input.mapsUrl !== undefined
+              ? input.mapsUrl
+              : input.addressUrl !== undefined
+              ? input.addressUrl
+              : input.googleMapsUrl !== undefined
+              ? input.googleMapsUrl
+              : existing.mapsUrl,
           coverUrl: input.coverUrl ?? existing.coverUrl,
           status: input.status ?? existing.status,
           rejectionReason: input.rejectionReason !== undefined ? input.rejectionReason : existing.rejectionReason,
@@ -162,77 +168,56 @@ export class UmkmService {
     return UmkmRepository.deleteUmkm(id);
   }
 
-  static async registerUmkm(input: unknown) {
-    // 1. Validate payload
-    const validation = registerUmkmSchema.safeParse(input);
-    if (!validation.success) {
-      throw new ValidationError(
-        validation.error.issues[0].message,
-        validation.error.flatten()
-      );
+  static async registerUmkm(data: any) {
+    if (!data.name || !data.ownerName || !data.description || !data.phone || !data.address) {
+      throw new ValidationError("Harap lengkapi semua data wajib");
     }
 
-    const data: RegisterUmkmDTO = validation.data;
-
-    if (data.umkmCategoryId === "other" && (!data.newCategoryName || !data.newCategoryName.trim())) {
-      throw new ValidationError("Nama kategori baru wajib diisi jika memilih Lainnya");
-    }
-
-    // 2. Process within transaction
-    const result = await UmkmRepository.executeTransaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       let finalCategoryId: bigint;
 
-      if (data.umkmCategoryId === "other") {
-        const cleanedName = data.newCategoryName!.trim();
-        const existingCat = await UmkmRepository.findCategoryByName(cleanedName, tx);
-
-        if (existingCat) {
-          finalCategoryId = existingCat.id;
-        } else {
-          const catSlug = await generateCategorySlug(cleanedName, tx);
-          const newCat = await UmkmRepository.createCategory(
-            { name: cleanedName, slug: catSlug },
-            tx
-          );
-          finalCategoryId = newCat.id;
-        }
-      } else {
-        if (!isNaN(Number(data.umkmCategoryId))) {
-          finalCategoryId = BigInt(data.umkmCategoryId);
-        } else {
-          let cat = await tx.umkmCategory.findFirst({
+      if (data.newCategoryName && data.newCategoryName.trim()) {
+        const catName = data.newCategoryName.trim();
+        const catSlug = await generateCategorySlug(catName, tx);
+        const newCat = await tx.umkmCategory.create({
+          data: {
+            name: catName,
+            slug: catSlug,
+          },
+        });
+        finalCategoryId = newCat.id;
+      } else if (data.umkmCategoryId) {
+        try {
+          const parsedId = BigInt(data.umkmCategoryId);
+          const found = await tx.umkmCategory.findUnique({ where: { id: parsedId } });
+          if (found) {
+            finalCategoryId = found.id;
+          } else {
+            const defaultCat = await tx.umkmCategory.findFirst();
+            if (!defaultCat) throw new NotFoundError("Kategori tidak valid");
+            finalCategoryId = defaultCat.id;
+          }
+        } catch {
+          const foundBySlug = await tx.umkmCategory.findFirst({
             where: {
               OR: [
-                { slug: data.umkmCategoryId.toLowerCase() },
+                { slug: data.umkmCategoryId },
                 { name: { equals: data.umkmCategoryId, mode: "insensitive" } },
               ],
             },
           });
-          if (!cat) {
-            const catSlug = await generateCategorySlug(data.umkmCategoryId, tx);
-            cat = await tx.umkmCategory.create({
-              data: { name: data.umkmCategoryId, slug: catSlug },
-            });
+          if (foundBySlug) {
+            finalCategoryId = foundBySlug.id;
+          } else {
+            const defaultCat = await tx.umkmCategory.findFirst();
+            if (!defaultCat) throw new NotFoundError("Kategori tidak valid");
+            finalCategoryId = defaultCat.id;
           }
-          finalCategoryId = cat.id;
         }
-      }
-
-      let finalPotentialId: bigint | null = null;
-      if (data.villagePotentialId) {
-        if (!isNaN(Number(data.villagePotentialId))) {
-          finalPotentialId = BigInt(data.villagePotentialId);
-        } else {
-          const pot = await tx.villagePotential.findFirst({
-            where: {
-              OR: [
-                { slug: data.villagePotentialId.toLowerCase() },
-                { name: { equals: data.villagePotentialId, mode: "insensitive" } },
-              ],
-            },
-          });
-          if (pot) finalPotentialId = pot.id;
-        }
+      } else {
+        const defaultCat = await tx.umkmCategory.findFirst();
+        if (!defaultCat) throw new NotFoundError("Kategori tidak valid");
+        finalCategoryId = defaultCat.id;
       }
 
       const slug = await generateUmkmSlug(data.name, tx);
@@ -242,15 +227,14 @@ export class UmkmService {
           name: data.name,
           ownerName: data.ownerName,
           umkmCategoryId: finalCategoryId,
-          villagePotentialId: finalPotentialId,
           description: data.description,
           phone: data.phone,
           email: data.email || null,
           coverUrl: data.coverUrl || "/images/placeholder-umkm.jpg",
           address: data.address,
-          latitude: data.latitude,
-          longitude: data.longitude,
-          mapsUrl: data.addressUrl || data.mapsUrl || null,
+          latitude: data.latitude !== undefined && data.latitude !== null ? Number(data.latitude) : -8.2811,
+          longitude: data.longitude !== undefined && data.longitude !== null ? Number(data.longitude) : 112.5664,
+          mapsUrl: data.mapsUrl || data.googleMapsUrl || data.addressUrl || data.googlePlaceId || null,
           since: data.since,
           openDay: data.openDay || null,
           startTime: data.startTime ? new Date(`1970-01-01T${data.startTime}:00Z`) : null,
@@ -262,7 +246,7 @@ export class UmkmService {
 
       if (data.galleries && data.galleries.length > 0) {
         await tx.umkmGallery.createMany({
-          data: data.galleries.map((url) => ({
+          data: data.galleries.map((url: string) => ({
             umkmId: umkm.id,
             imageUrl: url,
           })),
@@ -271,7 +255,7 @@ export class UmkmService {
 
       if (data.products && data.products.length > 0) {
         await tx.product.createMany({
-          data: data.products.map((prod) => ({
+          data: data.products.map((prod: any) => ({
             umkmId: umkm.id,
             name: prod.name,
             description: prod.description,

@@ -57,7 +57,6 @@ export class ProductsRepository {
           umkm: {
             include: {
               category: true,
-              potential: true,
             },
           },
         },
@@ -103,7 +102,6 @@ export class ProductsRepository {
         umkm: {
           include: {
             category: true,
-            potential: true,
             galleries: true,
           },
         },

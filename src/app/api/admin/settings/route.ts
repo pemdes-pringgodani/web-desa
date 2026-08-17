@@ -1,13 +1,14 @@
 import { SettingsRepository } from "../../../../modules/settings/settings.repository";
 import { ApiResponse } from "../../../../shared/utils/response";
 import { requireAdmin } from "../../../../shared/auth/require-admin";
+import { StorageService } from "../../../../modules/storage/storage.service";
 
 export async function GET() {
   try {
     const raw = await SettingsRepository.getSetting();
     const data = {
-      website_name: raw?.websiteName || "Desa Pringgodani",
-      logo_url: raw?.logoUrl || "/images/logo-desa.png",
+      website_name: raw?.websiteName || "Lokal Pringgodani",
+      logo_url: raw?.logoUrl || "/images/logo.png",
       favicon_url: raw?.faviconUrl || "/favicon.ico",
       contact_email: raw?.email || "info@pringgodani.desa.id",
       contact_phone: raw?.phone || "081234567890",
@@ -17,16 +18,6 @@ export async function GET() {
       social_youtube: raw?.youtube || "",
       social_tiktok: raw?.tiktok || "",
       jumlah_dusun: 4,
-      // Compatibility aliases
-      websiteName: raw?.websiteName || "Desa Pringgodani",
-      logoUrl: raw?.logoUrl || "/images/logo-desa.png",
-      faviconUrl: raw?.faviconUrl || "/favicon.ico",
-      contactEmail: raw?.email || "info@pringgodani.desa.id",
-      contactPhone: raw?.phone || "081234567890",
-      socialFacebook: raw?.facebook || "",
-      socialInstagram: raw?.instagram || "",
-      socialYoutube: raw?.youtube || "",
-      socialTiktok: raw?.tiktok || "",
     };
     return ApiResponse.success(data);
   } catch (error: any) {
@@ -39,16 +30,28 @@ export async function PUT(request: Request) {
   try {
     await requireAdmin();
     const body = await request.json();
-    const websiteName = body.website_name || body.websiteName;
-    const logoUrl = body.logo_url || body.logoUrl;
-    const faviconUrl = body.favicon_url || body.faviconUrl;
-    const email = body.contact_email || body.contactEmail || body.email;
-    const phone = body.contact_phone || body.contactPhone || body.phone;
+    const websiteName = body.website_name;
+    const logoUrl = body.logo_url;
+    const faviconUrl = body.favicon_url;
+    const email = body.contact_email;
+    const phone = body.contact_phone;
     const address = body.address;
-    const facebook = body.social_facebook || body.socialFacebook || body.facebook;
-    const instagram = body.social_instagram || body.socialInstagram || body.instagram;
-    const youtube = body.social_youtube || body.socialYoutube || body.youtube;
-    const tiktok = body.social_tiktok || body.socialTiktok || body.tiktok;
+    const facebook = body.social_facebook;
+    const instagram = body.social_instagram;
+    const youtube = body.social_youtube;
+    const tiktok = body.social_tiktok;
+
+    const existing = await SettingsRepository.getSetting();
+
+    // If logo was changed/removed and previous was a Supabase Storage file, clean it up
+    if (existing?.logoUrl && logoUrl !== undefined && existing.logoUrl !== logoUrl) {
+      await StorageService.deleteFile(existing.logoUrl);
+    }
+
+    // If favicon was changed/removed and previous was a Supabase Storage file, clean it up
+    if (existing?.faviconUrl && faviconUrl !== undefined && existing.faviconUrl !== faviconUrl) {
+      await StorageService.deleteFile(existing.faviconUrl);
+    }
 
     await SettingsRepository.updateSetting({
       websiteName,
@@ -65,8 +68,8 @@ export async function PUT(request: Request) {
 
     const updated = await SettingsRepository.getSetting();
     const data = {
-      website_name: updated?.websiteName || "Desa Pringgodani",
-      logo_url: updated?.logoUrl || "/images/logo-desa.png",
+      website_name: updated?.websiteName || "Lokal Pringgodani",
+      logo_url: updated?.logoUrl || "/images/logo.png",
       favicon_url: updated?.faviconUrl || "/favicon.ico",
       contact_email: updated?.email || "info@pringgodani.desa.id",
       contact_phone: updated?.phone || "081234567890",

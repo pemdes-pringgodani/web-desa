@@ -8,10 +8,10 @@ export async function GET(request: Request) {
     await requireAdmin();
     const { searchParams } = new URL(request.url);
     const page = searchParams.get("page") ? parseInt(searchParams.get("page")!, 10) : 1;
-    const limit = searchParams.get("limit") ? parseInt(searchParams.get("limit")!, 10) : 20;
+    const limit = searchParams.get("limit") ? parseInt(searchParams.get("limit")!, 10) : 1000;
     const category = searchParams.get("category") || undefined;
     const search = searchParams.get("search") || undefined;
-    const status = searchParams.get("status") || undefined;
+    const status = searchParams.get("status") || "ALL";
 
     const data = await UmkmService.getAllUmkm({
       page,

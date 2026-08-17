@@ -1,4 +1,5 @@
 import { MapsRepository } from "./maps.repository";
+import { UmkmRepository } from "../umkm/umkm.repository";
 import { NotFoundError, ValidationError } from "../../shared/errors/app-error";
 import { prisma } from "../../shared/db/client";
 import { generateCategorySlug, generateUmkmSlug } from "../../shared/utils/slug";
@@ -150,6 +151,6 @@ export class MapsService {
       throw new NotFoundError("ID lokasi tidak valid");
     }
 
-    return prisma.umkm.delete({ where: { id } });
+    return UmkmRepository.deleteUmkm(id);
   }
 }

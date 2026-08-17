@@ -26,6 +26,7 @@ export class AdminSubmissionsRepository {
         include: {
           category: true,
           products: true,
+          galleries: true,
         },
         orderBy: { id: "desc" },
       }),
@@ -72,8 +73,21 @@ export class AdminSubmissionsRepository {
       categoryName: u.category?.name || "UMKM",
       description: u.description,
       phone: u.phone,
+      email: u.email || undefined,
       address: u.address,
+      latitude: u.latitude !== null ? Number(u.latitude) : -8.2811,
+      longitude: u.longitude !== null ? Number(u.longitude) : 112.5664,
+      mapsUrl: u.mapsUrl || undefined,
+      since: u.since || undefined,
+      openDay: u.openDay || undefined,
+      startTime: u.startTime
+        ? u.startTime.toISOString().substring(11, 16)
+        : undefined,
+      endTime: u.endTime
+        ? u.endTime.toISOString().substring(11, 16)
+        : undefined,
       coverUrl: u.coverUrl || "/images/placeholder-umkm.jpg",
+      galleries: u.galleries?.map((g) => g.imageUrl) || [],
       products: u.products?.map((p) => ({
         name: p.name,
         price: p.price ? Number(p.price) : 0,

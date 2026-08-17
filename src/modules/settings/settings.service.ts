@@ -5,8 +5,8 @@ export class SettingsService {
     const raw = await SettingsRepository.getSetting();
 
     const settings: Record<string, unknown> = {
-      website_name: raw?.websiteName || "Desa Pringgodani",
-      logo_url: raw?.logoUrl || "/logo.png",
+      website_name: raw?.websiteName || "Lokal Pringgodani",
+      logo_url: raw?.logoUrl || "/images/logo.png",
       favicon_url: raw?.faviconUrl || "/favicon.ico",
       contact_email: raw?.email || "info@pringgodani.desa.id",
       contact_phone: raw?.phone || "081234567890",

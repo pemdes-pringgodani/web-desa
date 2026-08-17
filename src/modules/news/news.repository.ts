@@ -1,4 +1,5 @@
 import { prisma } from "../../shared/db/client";
+import { StorageService } from "../storage/storage.service";
 
 export interface FindAllNewsParams {
   page?: number;
@@ -285,18 +286,6 @@ export class NewsRepository {
             },
           },
         },
-        newsPotentials: {
-          include: {
-            potential: {
-              select: {
-                id: true,
-                name: true,
-                slug: true,
-                coverUrl: true,
-              },
-            },
-          },
-        },
       },
     });
 
@@ -355,13 +344,6 @@ export class NewsRepository {
       umkmSlug: np.product.umkm?.slug,
     }));
 
-    const taggedPotentials = n.newsPotentials.map((np) => ({
-      id: np.potential.id.toString(),
-      name: np.potential.name,
-      slug: np.potential.slug,
-      coverUrl: np.potential.coverUrl || "/images/placeholder-potensi.jpg",
-    }));
-
     const totalWords = contentSections.reduce(
       (acc, curr) => acc + (curr.paragraph || "").split(/\s+/).length,
       0
@@ -388,7 +370,7 @@ export class NewsRepository {
       galleryImages,
       taggedUmkms,
       taggedProducts,
-      taggedPotentials,
+      taggedPotentials: [],
       publishedAt: n.publishedAt
         ? n.publishedAt.toISOString()
         : new Date().toISOString(),
@@ -429,11 +411,6 @@ export class NewsRepository {
             product: true,
           },
         },
-        newsPotentials: {
-          include: {
-            potential: true,
-          },
-        },
       },
     });
 
@@ -465,17 +442,44 @@ export class NewsRepository {
         imageDescription: img.imageDescription,
         sortOrder: img.sortOrder,
       })) || [],
-      taggedUmkmIds: n.newsUmkms.map((nu) => nu.umkmId.toString()),
-      taggedProductIds: n.newsProducts.map((np) => np.productId.toString()),
-      taggedPotentialIds: n.newsPotentials.map((np) => np.potentialId.toString()),
+      taggedUmkmIds: n.newsUmkms ? n.newsUmkms.map((nu) => nu.umkmId.toString()) : [],
+      taggedProductIds: n.newsProducts ? n.newsProducts.map((np) => np.productId.toString()) : [],
     };
   }
 
   static async deleteNews(id: bigint) {
-    return prisma.$transaction(async (tx) => {
+    // 1. Fetch media URLs to delete from Supabase Storage
+    const existing = await prisma.news.findUnique({
+      where: { id },
+      include: {
+        articleDetail: {
+          include: { blocks: { select: { imageUrl: true } } },
+        },
+        galleryDetail: {
+          include: { images: { select: { imageUrl: true } } },
+        },
+      },
+    });
+
+    const imageUrls: (string | null | undefined)[] = [];
+    if (existing) {
+      if (existing.coverUrl) imageUrls.push(existing.coverUrl);
+      if (existing.articleDetail?.blocks) {
+        existing.articleDetail.blocks.forEach((b) => {
+          if (b.imageUrl) imageUrls.push(b.imageUrl);
+        });
+      }
+      if (existing.galleryDetail?.images) {
+        existing.galleryDetail.images.forEach((img) => {
+          if (img.imageUrl) imageUrls.push(img.imageUrl);
+        });
+      }
+    }
+
+    // 2. Delete database records
+    const deleted = await prisma.$transaction(async (tx) => {
       await tx.newsUmkm.deleteMany({ where: { newsId: id } });
       await tx.newsProduct.deleteMany({ where: { newsId: id } });
-      await tx.newsPotential.deleteMany({ where: { newsId: id } });
 
       const art = await tx.articleDetail.findUnique({ where: { newsId: id } });
       if (art) {
@@ -491,6 +495,13 @@ export class NewsRepository {
 
       return tx.news.delete({ where: { id } });
     });
+
+    // 3. Delete files from Supabase Storage safely
+    if (imageUrls.length > 0) {
+      await StorageService.deleteFiles(imageUrls);
+    }
+
+    return deleted;
   }
 
   static async executeTransaction<T>(fn: (tx: any) => Promise<T>): Promise<T> {

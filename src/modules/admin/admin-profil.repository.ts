@@ -34,6 +34,9 @@ export class AdminProfilRepository {
       headPosition: headOfficial?.position || "Kepala Desa",
       headPhoto: profile.headPhoto || headOfficial?.photoUrl || "/images/kepala-desa.jpg",
       headGreeting: profile.headGreeting || "Selamat datang di portal LokalUMKM Desa Pringgodani.",
+      aboutText:
+        profile.aboutText ||
+        "Desa Pringgodani berada di wilayah Kecamatan Bantur, Kabupaten Malang, Jawa Timur. Wilayah ini dianugerahi tanah yang subur untuk komoditas pertanian tebu, padi, dan palawija, serta masyarakat yang aktif memproduksi aneka produk olahan rumahan, kerajinan tangan, dan aneka usaha jasa.\n\nMelalui portal Lokal Pringgodani, Pemerintah Desa memfasilitasi publikasi produk olahan, sentra kerajinan, dan hasil bumi warga agar mudah ditemukan oleh masyarakat luas dan pembeli dari luar daerah secara langsung.",
       address: profile.address,
       phone: profile.phone,
       email: profile.email || "info@pringgodani.desa.id",
@@ -52,11 +55,12 @@ export class AdminProfilRepository {
     const profile = await prisma.villageProfile.findFirst();
 
     const dataToUpdate: any = {};
-    if (payload.villageName) dataToUpdate.villageName = payload.villageName;
-    if (payload.headGreeting) dataToUpdate.headGreeting = payload.headGreeting;
-    if (payload.headPhoto) dataToUpdate.headPhoto = payload.headPhoto;
-    if (payload.address) dataToUpdate.address = payload.address;
-    if (payload.phone) dataToUpdate.phone = payload.phone;
+    if (payload.villageName !== undefined) dataToUpdate.villageName = payload.villageName;
+    if (payload.headGreeting !== undefined) dataToUpdate.headGreeting = payload.headGreeting;
+    if (payload.headPhoto !== undefined) dataToUpdate.headPhoto = payload.headPhoto;
+    if (payload.aboutText !== undefined) dataToUpdate.aboutText = payload.aboutText;
+    if (payload.address !== undefined) dataToUpdate.address = payload.address;
+    if (payload.phone !== undefined) dataToUpdate.phone = payload.phone;
     if (payload.email !== undefined) dataToUpdate.email = payload.email;
 
     if (profile) {
@@ -66,23 +70,26 @@ export class AdminProfilRepository {
       });
 
       if (payload.headName || payload.headPosition || payload.headPhoto) {
-        const headOfficial = await prisma.villageOfficial.findFirst({
-          where: {
-            villageProfileId: profile.id,
-            position: { contains: "Kepala Desa", mode: "insensitive" },
-          },
-        });
-
-        if (headOfficial) {
-          await prisma.villageOfficial.update({
-            where: { id: headOfficial.id },
-            data: {
-              ...(payload.headName && { name: payload.headName }),
-              ...(payload.headPosition && { position: payload.headPosition }),
-              ...(payload.headPhoto && { photoUrl: payload.headPhoto }),
-              ...(payload.headGreeting && { greeting: payload.headGreeting }),
+        try {
+          const headOfficial = await prisma.villageOfficial.findFirst({
+            where: {
+              villageProfileId: profile.id,
+              position: { contains: "Kepala Desa", mode: "insensitive" },
             },
           });
+
+          if (headOfficial) {
+            await prisma.villageOfficial.update({
+              where: { id: headOfficial.id },
+              data: {
+                ...(payload.headName && { name: payload.headName }),
+                ...(payload.headPosition && { position: payload.headPosition }),
+                ...(payload.headPhoto && { photoUrl: payload.headPhoto }),
+              },
+            });
+          }
+        } catch (officialErr) {
+          console.warn("Gagal memperbarui data perangkat Kepala Desa:", officialErr);
         }
       }
     } else {
@@ -91,6 +98,7 @@ export class AdminProfilRepository {
           villageName: payload.villageName || "Desa Pringgodani",
           headGreeting: payload.headGreeting || "Selamat datang di website resmi Desa Pringgodani.",
           headPhoto: payload.headPhoto || "/images/kepala-desa.jpg",
+          aboutText: payload.aboutText || null,
           address: payload.address || "Jl. Raya Desa Pringgodani No. 1, Bantur, Malang",
           phone: payload.phone || "081234567890",
           email: payload.email || "info@pringgodani.desa.id",

@@ -1,5 +1,6 @@
 import { prisma } from "../../shared/db/client";
 import { formatWhatsAppNumber, createWhatsAppLink } from "../../shared/utils/whatsapp";
+import { StorageService } from "../storage/storage.service";
 
 export interface FindAllUmkmParams {
   page?: number;
@@ -104,7 +105,6 @@ export class UmkmRepository {
         where,
         include: {
           category: true,
-          potential: true,
           _count: {
             select: {
               products: true,
@@ -122,7 +122,7 @@ export class UmkmRepository {
 
     const items = rawItems.map((u) => {
       const waFormatted = formatWhatsAppNumber(u.phone);
-      const waTemplate = `Halo ${u.name}, saya melihat profil usaha Anda di LokalUMKM Pringgodani dan ingin bertanya seputar produk/layanan Anda.`;
+      const waTemplate = `Halo ${u.name}, saya melihat profil usaha Anda di Lokal Pringgodani dan ingin bertanya seputar produk/layanan Anda.`;
       const waLink = createWhatsAppLink(u.phone, waTemplate);
 
       return {
@@ -152,13 +152,7 @@ export class UmkmRepository {
         status: u.status,
         totalProducts: u._count.products,
         publishedAt: u.publishedAt?.toISOString() || null,
-        potential: u.potential
-          ? {
-              id: u.potential.id.toString(),
-              name: u.potential.name,
-              slug: u.potential.slug,
-            }
-          : null,
+        potential: null,
       };
     });
 
@@ -176,7 +170,6 @@ export class UmkmRepository {
       where: { slug },
       include: {
         category: true,
-        potential: true,
         galleries: true,
         products: true,
         newsUmkms: {
@@ -194,7 +187,7 @@ export class UmkmRepository {
     if (!u) return null;
 
     const waFormatted = formatWhatsAppNumber(u.phone);
-    const waTemplate = `Halo ${u.name}, saya melihat profil usaha Anda di LokalUMKM Pringgodani dan ingin bertanya seputar produk/layanan Anda.`;
+    const waTemplate = `Halo ${u.name}, saya melihat profil usaha Anda di Lokal Pringgodani dan ingin bertanya seputar produk/layanan Anda.`;
     const waLink = createWhatsAppLink(u.phone, waTemplate);
 
     const relatedNews = u.newsUmkms
@@ -241,7 +234,7 @@ export class UmkmRepository {
         caption: g.caption || null,
       })),
       products: u.products.map((p) => {
-        const prodWa = `Halo ${u.name}, saya melihat produk "${p.name}" di LokalUMKM Pringgodani dan ingin memesannya.`;
+        const prodWa = `Halo ${u.name}, saya melihat produk "${p.name}" di Lokal Pringgodani dan ingin memesannya.`;
         return {
           id: p.id.toString(),
           name: p.name,
@@ -253,26 +246,46 @@ export class UmkmRepository {
           whatsappLink: createWhatsAppLink(u.phone, prodWa),
         };
       }),
-      potential: u.potential
-        ? {
-            id: u.potential.id.toString(),
-            title: u.potential.name,
-            name: u.potential.name,
-            slug: u.potential.slug,
-            category: "Potensi",
-          }
-        : null,
+      potential: null,
       relatedNews,
     };
   }
 
   static async deleteUmkm(id: bigint) {
-    return prisma.$transaction(async (tx) => {
+    // 1. Fetch images to delete from Supabase Storage
+    const existing = await prisma.umkm.findUnique({
+      where: { id },
+      include: {
+        products: { select: { imageUrl: true } },
+        galleries: { select: { imageUrl: true } },
+      },
+    });
+
+    const imageUrls: (string | null | undefined)[] = [];
+    if (existing) {
+      if (existing.coverUrl) imageUrls.push(existing.coverUrl);
+      existing.products.forEach((p) => {
+        if (p.imageUrl) imageUrls.push(p.imageUrl);
+      });
+      existing.galleries.forEach((g) => {
+        if (g.imageUrl) imageUrls.push(g.imageUrl);
+      });
+    }
+
+    // 2. Delete database records
+    const deleted = await prisma.$transaction(async (tx) => {
       await tx.newsUmkm.deleteMany({ where: { umkmId: id } });
       await tx.product.deleteMany({ where: { umkmId: id } });
       await tx.umkmGallery.deleteMany({ where: { umkmId: id } });
       return tx.umkm.delete({ where: { id } });
     });
+
+    // 3. Delete files from Supabase Storage safely
+    if (imageUrls.length > 0) {
+      await StorageService.deleteFiles(imageUrls);
+    }
+
+    return deleted;
   }
 
   static async findCategoryByName(name: string, tx?: any) {

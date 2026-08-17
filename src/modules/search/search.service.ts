@@ -15,7 +15,7 @@ export class SearchService {
 
     const query = queryString.trim();
 
-    const [umkmsRaw, productsRaw, potentialsRaw, newsRaw] = await Promise.all([
+    const [umkmsRaw, productsRaw, newsRaw] = await Promise.all([
       prisma.umkm.findMany({
         where: {
           status: "APPROVED",
@@ -60,21 +60,6 @@ export class SearchService {
         orderBy: { id: "desc" },
       }),
 
-      prisma.villagePotential.findMany({
-        where: {
-          OR: [
-            { name: { contains: query, mode: "insensitive" } },
-            { summary: { contains: query, mode: "insensitive" } },
-            { description: { contains: query, mode: "insensitive" } },
-          ],
-        },
-        include: {
-          category: true,
-        },
-        take: 6,
-        orderBy: { name: "asc" },
-      }),
-
       prisma.news.findMany({
         where: {
           status: "PUBLISHED",
@@ -117,16 +102,6 @@ export class SearchService {
       },
     }));
 
-    const potentials = potentialsRaw.map((pot) => ({
-      id: pot.id.toString(),
-      title: pot.name,
-      name: pot.name,
-      slug: pot.slug,
-      summary: pot.summary,
-      category: pot.category?.name || "Potensi",
-      coverUrl: pot.coverUrl || "/images/placeholder-potensi.jpg",
-    }));
-
     const news = newsRaw.map((n) => ({
       id: n.id.toString(),
       title: n.title,
@@ -138,14 +113,14 @@ export class SearchService {
       publishedAt: n.publishedAt?.toISOString() || null,
     }));
 
-    const totalMatches = umkms.length + products.length + potentials.length + news.length;
+    const totalMatches = umkms.length + products.length + news.length;
 
     return {
       query,
       totalMatches,
       umkms,
       products,
-      potentials,
+      potentials: [],
       news,
     };
   }
