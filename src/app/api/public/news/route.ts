@@ -7,9 +7,17 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const page = searchParams.get("page") ? parseInt(searchParams.get("page")!, 10) : 1;
     const limit = searchParams.get("limit") ? parseInt(searchParams.get("limit")!, 10) : 6;
-    const category = searchParams.get("category") || undefined;
+    const category =
+      searchParams.get("category") ||
+      searchParams.get("categorySlug") ||
+      searchParams.get("kategori") ||
+      undefined;
     const type = searchParams.get("type") || undefined;
-    const search = searchParams.get("search") || searchParams.get("q") || undefined;
+    const search =
+      searchParams.get("search") ||
+      searchParams.get("q") ||
+      searchParams.get("cari") ||
+      undefined;
     const exclude = searchParams.get("exclude") || undefined;
     const status = searchParams.get("status") || "PUBLISHED";
     const umkmSlug = searchParams.get("umkmSlug") || searchParams.get("umkm") || undefined;
