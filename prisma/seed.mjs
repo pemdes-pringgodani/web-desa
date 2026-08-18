@@ -81,31 +81,43 @@ async function main() {
   console.log("3/5 Seeding News Categories & Sample News...");
   const catKegiatan = await prisma.newsCategory.upsert({
     where: { slug: "kegiatan-desa" },
-    update: {},
-    create: { name: "Kegiatan Desa", slug: "kegiatan-desa", description: "Liputan kegiatan sosial dan kebudayaan warga desa" },
+    update: { name: "Kegiatan Desa", description: "Liputan kegiatan kemasyarakatan, sosial, dan kebudayaan warga desa" },
+    create: { name: "Kegiatan Desa", slug: "kegiatan-desa", description: "Liputan kegiatan kemasyarakatan, sosial, dan kebudayaan warga desa" },
   });
 
   const catPembangunan = await prisma.newsCategory.upsert({
     where: { slug: "pembangunan" },
-    update: {},
-    create: { name: "Pembangunan", slug: "pembangunan", description: "Informasi proyek infrastruktur dan sarana desa" },
+    update: { name: "Pembangunan", description: "Informasi proyek infrastruktur dan sarana prasarana desa" },
+    create: { name: "Pembangunan", slug: "pembangunan", description: "Informasi proyek infrastruktur dan sarana prasarana desa" },
   });
 
   const catEkonomi = await prisma.newsCategory.upsert({
     where: { slug: "ekonomi-umkm" },
-    update: {},
-    create: { name: "Ekonomi & UMKM", slug: "ekonomi-umkm", description: "Kabar perkembangan usaha lokal dan ekonomi warga" },
+    update: { name: "Ekonomi & UMKM", description: "Kabar perkembangan usaha lokal dan pemberdayaan ekonomi warga" },
+    create: { name: "Ekonomi & UMKM", slug: "ekonomi-umkm", description: "Kabar perkembangan usaha lokal dan pemberdayaan ekonomi warga" },
+  });
+
+  const catPengumuman = await prisma.newsCategory.upsert({
+    where: { slug: "pengumuman" },
+    update: { name: "Pengumuman", description: "Pengumuman resmi dari Pemerintah Desa Pringgodani" },
+    create: { name: "Pengumuman", slug: "pengumuman", description: "Pengumuman resmi dari Pemerintah Desa Pringgodani" },
+  });
+
+  const catKesehatan = await prisma.newsCategory.upsert({
+    where: { slug: "kesehatan-posyandu" },
+    update: { name: "Kesehatan & Posyandu", description: "Layanan posyandu, kesehatan ibu-anak, dan kebersihan desa" },
+    create: { name: "Kesehatan & Posyandu", slug: "kesehatan-posyandu", description: "Layanan posyandu, kesehatan ibu-anak, dan kebersihan desa" },
   });
 
   const typeArtikel = await prisma.newsType.upsert({
     where: { slug: "artikel" },
-    update: {},
+    update: { name: "Artikel Berita", description: "Format publikasi tulisan berita berparagraf" },
     create: { name: "Artikel Berita", slug: "artikel", description: "Format publikasi tulisan berita berparagraf" },
   });
 
   const typeGaleri = await prisma.newsType.upsert({
     where: { slug: "galeri-foto" },
-    update: {},
+    update: { name: "Galeri Foto", description: "Format publikasi album dokumentasi kegiatan" },
     create: { name: "Galeri Foto", slug: "galeri-foto", description: "Format publikasi album dokumentasi kegiatan" },
   });
 
@@ -157,20 +169,32 @@ async function main() {
   console.log("4/5 Seeding UMKM Categories...");
   const umkmCatKuliner = await prisma.umkmCategory.upsert({
     where: { slug: "kuliner" },
-    update: {},
+    update: { name: "Kuliner", description: "Aneka kuliner olahan makanan & minuman khas desa" },
     create: { name: "Kuliner", slug: "kuliner", description: "Aneka kuliner olahan makanan & minuman khas desa" },
   });
 
   const umkmCatKerajinan = await prisma.umkmCategory.upsert({
     where: { slug: "kerajinan" },
-    update: {},
-    create: { name: "Kerajinan", slug: "kerajinan", description: "Kerajinan tangan dan produk seni warga desa" },
+    update: { name: "Kerajinan & Seni", description: "Kerajinan tangan, batik, dan karya seni warga desa" },
+    create: { name: "Kerajinan", slug: "kerajinan", description: "Kerajinan tangan, batik, dan karya seni warga desa" },
   });
 
   const umkmCatPertanian = await prisma.umkmCategory.upsert({
     where: { slug: "pertanian" },
-    update: {},
-    create: { name: "Pertanian & Perkebunan", slug: "pertanian", description: "Hasil bumi, jeruk manis, dan produk tani desa" },
+    update: { name: "Pertanian & Perkebunan", description: "Hasil bumi, jeruk manis, dan produk tani desa" },
+    create: { name: "Pertanian", slug: "pertanian", description: "Hasil bumi, jeruk manis, dan produk tani desa" },
+  });
+
+  const umkmCatJasa = await prisma.umkmCategory.upsert({
+    where: { slug: "jasa-perdagangan" },
+    update: { name: "Jasa & Perdagangan", description: "Penyedia jasa, toko kelontong, dan perdagangan lokal" },
+    create: { name: "Jasa & Perdagangan", slug: "jasa-perdagangan", description: "Penyedia jasa, toko kelontong, dan perdagangan lokal" },
+  });
+
+  const umkmCatFashion = await prisma.umkmCategory.upsert({
+    where: { slug: "fashion-tekstil" },
+    update: { name: "Fashion & Tekstil", description: "Pakaian, konveksi, dan produk tekstil lokal" },
+    create: { name: "Fashion & Tekstil", slug: "fashion-tekstil", description: "Pakaian, konveksi, dan produk tekstil lokal" },
   });
 
   // 5. Sample UMKMs & Products
