@@ -4,7 +4,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg?logo=typescript)](https://www.typescriptlang.org/)
 [![Prisma](https://img.shields.io/badge/Prisma-7.9.1-2D3748.svg?logo=prisma)](https://www.prisma.io/)
 [![Database](https://img.shields.io/badge/PostgreSQL-Supabase-3ECF8E.svg?logo=supabase)](https://supabase.com/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Access](https://img.shields.io/badge/Access-Private%20%2F%20Proprietary-red.svg)](#-license)
 
 ---
 
@@ -288,4 +288,4 @@ web-desa/
 ---
 
 ## 📄 [LICENSE]
-Didistribusikan di bawah lisensi **MIT**. Silakan gunakan, kembangkan, dan manfaatkan demi kemajuan digitalisasi desa!
+Proyek ini bersifat **Private & Proprietary** khusus untuk Pemerintah Desa Pringgodani. Hak cipta dilindungi undang-undang. Dilarang menggandakan, mendistribusikan, memodifikasi, atau mempublikasikan kode sumber ini tanpa izin tertulis dari pemilik proyek.
