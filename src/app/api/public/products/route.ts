@@ -8,9 +8,20 @@ export async function GET(request: Request) {
     const params = {
       page: searchParams.get("page") || undefined,
       limit: searchParams.get("limit") || undefined,
-      category: searchParams.get("category") || undefined,
-      search: searchParams.get("search") || searchParams.get("q") || undefined,
-      umkmSlug: searchParams.get("umkmSlug") || searchParams.get("umkm") || undefined,
+      category:
+        searchParams.get("category") ||
+        searchParams.get("categorySlug") ||
+        searchParams.get("kategori") ||
+        undefined,
+      search:
+        searchParams.get("search") ||
+        searchParams.get("q") ||
+        searchParams.get("cari") ||
+        undefined,
+      umkmSlug:
+        searchParams.get("umkmSlug") ||
+        searchParams.get("umkm") ||
+        undefined,
       minPrice: searchParams.get("minPrice") || undefined,
       maxPrice: searchParams.get("maxPrice") || undefined,
       sort: searchParams.get("sort") || undefined,

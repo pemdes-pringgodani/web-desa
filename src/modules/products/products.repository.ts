@@ -19,13 +19,26 @@ export class ProductsRepository {
     };
 
     if (category) {
-      where.umkm.category = {
-        slug: category,
-      };
+      if (!isNaN(Number(category))) {
+        where.umkm = {
+          ...where.umkm,
+          umkmCategoryId: BigInt(category),
+        };
+      } else {
+        where.umkm = {
+          ...where.umkm,
+          category: {
+            slug: category,
+          },
+        };
+      }
     }
 
     if (umkmSlug) {
-      where.umkm.slug = umkmSlug;
+      where.umkm = {
+        ...where.umkm,
+        slug: umkmSlug,
+      };
     }
 
     if (search && search.trim()) {
@@ -73,17 +86,29 @@ export class ProductsRepository {
       description: p.description,
       price: p.price ? Number(p.price) : null,
       imageUrl: p.imageUrl || "/images/placeholder-product.jpg",
-      umkm: {
-        id: p.umkm.id.toString(),
-        name: p.umkm.name,
-        slug: p.umkm.slug,
-        ownerName: p.umkm.ownerName,
-        phone: p.umkm.phone,
-        address: p.umkm.address,
-        coverUrl: p.umkm.coverUrl || "/images/placeholder-umkm.jpg",
-        category: p.umkm.category?.name || "UMKM",
-        categorySlug: p.umkm.category?.slug || "umkm",
-      },
+      umkm: p.umkm
+        ? {
+            id: p.umkm.id.toString(),
+            name: p.umkm.name,
+            slug: p.umkm.slug,
+            ownerName: p.umkm.ownerName,
+            phone: p.umkm.phone,
+            address: p.umkm.address,
+            coverUrl: p.umkm.coverUrl || "/images/placeholder-umkm.jpg",
+            category: p.umkm.category?.name || "UMKM",
+            categorySlug: p.umkm.category?.slug || "umkm",
+          }
+        : {
+            id: "0",
+            name: "UMKM Desa Pringgodani",
+            slug: "umkm",
+            ownerName: "",
+            phone: "",
+            address: "",
+            coverUrl: "/images/placeholder-umkm.jpg",
+            category: "UMKM",
+            categorySlug: "umkm",
+          },
     }));
 
     return {
@@ -102,16 +127,6 @@ export class ProductsRepository {
         umkm: {
           include: {
             category: true,
-            galleries: true,
-          },
-        },
-        newsProducts: {
-          include: {
-            news: {
-              include: {
-                category: true,
-              },
-            },
           },
         },
       },
@@ -119,54 +134,35 @@ export class ProductsRepository {
 
     if (!p) return null;
 
-    const relatedProductsRaw = await prisma.product.findMany({
-      where: {
-        umkmId: p.umkmId,
-        id: { not: p.id },
-      },
-      take: 4,
-    });
-
-    const relatedProducts = relatedProductsRaw.map((rp) => ({
-      id: rp.id.toString(),
-      name: rp.name,
-      price: rp.price ? Number(rp.price) : null,
-      imageUrl: rp.imageUrl || "/images/placeholder-product.jpg",
-    }));
-
-    const relatedNews = p.newsProducts
-      .filter((np) => np.news.status === "PUBLISHED")
-      .map((np) => ({
-        id: np.news.id.toString(),
-        title: np.news.title,
-        slug: np.news.slug,
-        excerpt: np.news.excerpt,
-        coverUrl: np.news.coverUrl,
-        category: np.news.category.name,
-        publishedAt: np.news.publishedAt?.toISOString() || null,
-      }));
-
     return {
       id: p.id.toString(),
       name: p.name,
       description: p.description,
       price: p.price ? Number(p.price) : null,
       imageUrl: p.imageUrl || "/images/placeholder-product.jpg",
-      umkm: {
-        id: p.umkm.id.toString(),
-        name: p.umkm.name,
-        slug: p.umkm.slug,
-        ownerName: p.umkm.ownerName,
-        phone: p.umkm.phone,
-        email: p.umkm.email,
-        address: p.umkm.address,
-        mapsUrl: p.umkm.mapsUrl,
-        coverUrl: p.umkm.coverUrl || "/images/placeholder-umkm.jpg",
-        category: p.umkm.category?.name || "UMKM",
-        categorySlug: p.umkm.category?.slug || "umkm",
-      },
-      relatedProducts,
-      relatedNews,
+      umkm: p.umkm
+        ? {
+            id: p.umkm.id.toString(),
+            name: p.umkm.name,
+            slug: p.umkm.slug,
+            ownerName: p.umkm.ownerName,
+            phone: p.umkm.phone,
+            address: p.umkm.address,
+            coverUrl: p.umkm.coverUrl || "/images/placeholder-umkm.jpg",
+            category: p.umkm.category?.name || "UMKM",
+            categorySlug: p.umkm.category?.slug || "umkm",
+          }
+        : {
+            id: "0",
+            name: "UMKM Desa Pringgodani",
+            slug: "umkm",
+            ownerName: "",
+            phone: "",
+            address: "",
+            coverUrl: "/images/placeholder-umkm.jpg",
+            category: "UMKM",
+            categorySlug: "umkm",
+          },
     };
   }
 
@@ -182,7 +178,7 @@ export class ProductsRepository {
         umkmId: data.umkmId,
         name: data.name,
         description: data.description,
-        price: data.price !== undefined && data.price !== null ? data.price : null,
+        price: data.price !== null && data.price !== undefined ? data.price : null,
         imageUrl: data.imageUrl || null,
       },
     });
@@ -200,9 +196,11 @@ export class ProductsRepository {
     return prisma.product.update({
       where: { id },
       data: {
-        ...(data.name && { name: data.name }),
-        ...(data.description && { description: data.description }),
-        ...(data.price !== undefined && { price: data.price }),
+        ...(data.name !== undefined && { name: data.name }),
+        ...(data.description !== undefined && { description: data.description }),
+        ...(data.price !== undefined && {
+          price: data.price !== null ? data.price : null,
+        }),
         ...(data.imageUrl !== undefined && { imageUrl: data.imageUrl }),
       },
     });
