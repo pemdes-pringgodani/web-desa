@@ -13,16 +13,8 @@ export interface FindAllUmkmParams {
 }
 
 export class UmkmRepository {
-  static async findAllCategories(includeAll = false) {
-    const where = includeAll
-      ? {}
-      : {
-          umkms: {
-            some: {
-              status: "APPROVED",
-            },
-          },
-        };
+  static async findAllCategories(includeAll = true) {
+    const where = {};
 
     const categories = await prisma.umkmCategory.findMany({
       where,
