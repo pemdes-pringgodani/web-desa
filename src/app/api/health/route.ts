@@ -8,6 +8,7 @@ export async function GET() {
 
     return ApiResponse.success({
       status: "ok",
+      version: "1.0.1",
       timestamp: new Date().toISOString(),
       service: "Web Desa Serverless Backend API",
       environment: process.env.NODE_ENV || "development",
