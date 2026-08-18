@@ -2,6 +2,7 @@ import "dotenv/config";
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
+import { createClient } from "@supabase/supabase-js";
 
 const connectionString = process.env.DATABASE_URL;
 const pool = new Pool({ connectionString });
@@ -11,8 +12,85 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   console.log("🌱 Starting Database Seeding for Web Desa Pringgodani...");
 
-  // 1. Website Setting
-  console.log("1/5 Seeding Website Setting...");
+  // 1. Roles & Admin User
+  console.log("1/6 Seeding Roles & Admin User...");
+  const adminRole = await prisma.role.upsert({
+    where: { id: BigInt(1) },
+    update: { name: "ADMIN", description: "Administrator Platform Desa Pringgodani" },
+    create: { id: BigInt(1), name: "ADMIN", description: "Administrator Platform Desa Pringgodani" },
+  });
+
+  const userRole = await prisma.role.upsert({
+    where: { id: BigInt(2) },
+    update: { name: "USER", description: "Warga / Pelaku UMKM Desa" },
+    create: { id: BigInt(2), name: "USER", description: "Warga / Pelaku UMKM Desa" },
+  });
+
+  const adminEmail = process.env.SEED_ADMIN_EMAIL || "admin@pringgodani.desa.id";
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD || "@AdminPringgodani142";
+  let adminUuid = "00000000-0000-0000-0000-000000000001";
+
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      const supabaseAdmin = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.SUPABASE_SERVICE_ROLE_KEY,
+        {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false,
+          },
+        }
+      );
+
+      const { data: usersList } = await supabaseAdmin.auth.admin.listUsers();
+      const existingUser = usersList?.users?.find((u) => u.email?.toLowerCase() === adminEmail.toLowerCase());
+
+      if (existingUser) {
+        adminUuid = existingUser.id;
+        await supabaseAdmin.auth.admin.updateUserById(adminUuid, {
+          password: adminPassword,
+          email_confirm: true,
+          user_metadata: { name: "Admin Desa Pringgodani" },
+        });
+        console.log(`   ✅ Synced Supabase Auth user: ${adminEmail}`);
+      } else {
+        const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+          email: adminEmail,
+          password: adminPassword,
+          email_confirm: true,
+          user_metadata: { name: "Admin Desa Pringgodani" },
+        });
+        if (!createError && newUser?.user) {
+          adminUuid = newUser.user.id;
+          console.log(`   ✅ Created Supabase Auth user: ${adminEmail}`);
+        } else if (createError) {
+          console.warn(`   ⚠️ Supabase Auth createUser: ${createError.message}`);
+        }
+      }
+    } catch (err) {
+      console.warn("   ⚠️ Supabase Auth admin API warning:", err.message);
+    }
+  }
+
+  await prisma.user.upsert({
+    where: { id: adminUuid },
+    update: {
+      name: "Admin Desa Pringgodani",
+      email: adminEmail,
+      roleId: adminRole.id,
+    },
+    create: {
+      id: adminUuid,
+      name: "Admin Desa Pringgodani",
+      email: adminEmail,
+      roleId: adminRole.id,
+    },
+  });
+  console.log(`   ✅ Admin Database Record Ready: ${adminEmail}`);
+
+  // 2. Website Setting
+  console.log("2/6 Seeding Website Setting...");
   await prisma.websiteSetting.upsert({
     where: { id: BigInt(1) },
     update: {},
@@ -31,8 +109,8 @@ async function main() {
     },
   });
 
-  // 2. Village Profile & Officials
-  console.log("2/5 Seeding Village Profile & Officials...");
+  // 3. Village Profile & Officials
+  console.log("3/6 Seeding Village Profile & Officials...");
   let profile = await prisma.villageProfile.findFirst();
   if (!profile) {
     profile = await prisma.villageProfile.create({
@@ -77,8 +155,8 @@ async function main() {
     });
   }
 
-  // 3. News Categories, Types & Sample News
-  console.log("3/5 Seeding News Categories & Sample News...");
+  // 4. News Categories, Types & Sample News
+  console.log("4/6 Seeding News Categories & Sample News...");
   const catKegiatan = await prisma.newsCategory.upsert({
     where: { slug: "kegiatan-desa" },
     update: { name: "Kegiatan Desa", description: "Liputan kegiatan kemasyarakatan, sosial, dan kebudayaan warga desa" },
@@ -165,8 +243,8 @@ async function main() {
     });
   }
 
-  // 4. UMKM Categories
-  console.log("4/5 Seeding UMKM Categories...");
+  // 5. UMKM Categories
+  console.log("5/6 Seeding UMKM Categories...");
   const umkmCatKuliner = await prisma.umkmCategory.upsert({
     where: { slug: "kuliner" },
     update: { name: "Kuliner", description: "Aneka kuliner olahan makanan & minuman khas desa" },
@@ -197,8 +275,8 @@ async function main() {
     create: { name: "Fashion & Tekstil", slug: "fashion-tekstil", description: "Pakaian, konveksi, dan produk tekstil lokal" },
   });
 
-  // 5. Sample UMKMs & Products
-  console.log("5/5 Seeding Sample UMKMs & Products...");
+  // 6. Sample UMKMs & Products
+  console.log("6/6 Seeding Sample UMKMs & Products...");
   const umkm1 = await prisma.umkm.upsert({
     where: { slug: "tempe-balado-pringgodani" },
     update: {},
