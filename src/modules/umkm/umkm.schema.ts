@@ -18,10 +18,6 @@ export const registerUmkmSchema = z.object({
     z.string().min(1, "Kategori UMKM wajib dipilih")
   ),
   newCategoryName: z.string().optional().nullable(),
-  villagePotentialId: z.preprocess(
-    (val) => (val ? String(val) : null),
-    z.string().nullable().optional()
-  ),
   description: z.string().min(1, "Deskripsi wajib diisi"),
   phone: z.string().min(1, "Nomor WhatsApp wajib diisi"),
   email: z.preprocess(
@@ -33,9 +29,7 @@ export const registerUmkmSchema = z.object({
     z.string().optional().default("/images/placeholder-umkm.jpg")
   ),
   address: z.string().min(1, "Alamat wajib diisi"),
-  addressUrl: z.string().nullable().optional(),
   mapsUrl: z.string().nullable().optional(),
-  googlePlaceId: z.string().nullable().optional(),
   latitude: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? -7.98 : Number(val)),
     z.number().optional()

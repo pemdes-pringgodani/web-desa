@@ -43,9 +43,7 @@ export class UmkmService {
       phone: u.phone,
       email: u.email,
       address: u.address,
-      mapsUrl: u.mapsUrl,
-      googleMapsUrl: u.mapsUrl,
-      addressUrl: u.mapsUrl,
+      mapsUrl: u.mapsUrl || null,
       ownerName: u.ownerName,
       coverUrl: u.coverUrl || "/images/placeholder-umkm.jpg",
       status: u.status,
@@ -76,7 +74,7 @@ export class UmkmService {
     try {
       id = BigInt(idStr);
     } catch {
-      throw new NotFoundError("ID UMKM tidak valid");
+      throw new ValidationError("Format ID UMKM tidak valid");
     }
 
     const result = await prisma.$transaction(async (tx) => {
@@ -96,11 +94,7 @@ export class UmkmService {
           address: input.address ?? existing.address,
           mapsUrl:
             input.mapsUrl !== undefined
-              ? input.mapsUrl
-              : input.addressUrl !== undefined
-              ? input.addressUrl
-              : input.googleMapsUrl !== undefined
-              ? input.googleMapsUrl
+              ? (input.mapsUrl?.trim() || null)
               : existing.mapsUrl,
           coverUrl: input.coverUrl ?? existing.coverUrl,
           status: input.status ?? existing.status,
@@ -237,7 +231,7 @@ export class UmkmService {
           address: data.address,
           latitude: data.latitude !== undefined && data.latitude !== null ? Number(data.latitude) : -8.2811,
           longitude: data.longitude !== undefined && data.longitude !== null ? Number(data.longitude) : 112.5664,
-          mapsUrl: data.mapsUrl || data.googleMapsUrl || data.addressUrl || data.googlePlaceId || null,
+          mapsUrl: data.mapsUrl?.trim() || null,
           since: data.since,
           openDay: data.openDay || null,
           startTime: data.startTime ? new Date(`1970-01-01T${data.startTime}:00Z`) : null,
