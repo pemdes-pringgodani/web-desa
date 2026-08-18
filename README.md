@@ -98,7 +98,7 @@ Backend ini mengadopsi pola **Modular Clean Architecture & Serverless REST API**
 
 ### 1. Clone Repo
 ```bash
-git clone https://github.com/faizulmushofa/web-desa.git
+git clone https://github.com/pemdes-pringgodani/web-desa.git
 cd web-desa
 ```
 
