@@ -13,10 +13,11 @@ export class AdminProfilRepository {
     if (!profile) {
       return {
         villageName: "Desa Pringgodani",
-        headName: "Ki Suryo Pringgo",
-        headPosition: "Kepala Desa Pringgodani",
-        headPhoto: "https://pringgondaniblog.wordpress.com/wp-content/uploads/2017/07/dsc_0607.jpg",
-        headGreeting: "Selamat datang di website resmi Desa Pringgodani.",
+        headName: "Kepala Desa Pringgodani",
+        headPosition: "Kepala Desa",
+        headPhoto: "/images/placeholder-avatar.jpg",
+        headGreeting: "",
+        aboutText: "",
         address: "Jl. Raya Desa Pringgodani No. 1, Bantur, Malang",
         phone: "081234567890",
         email: "info@pringgodani.desa.id",
@@ -30,13 +31,11 @@ export class AdminProfilRepository {
 
     return {
       villageName: profile.villageName,
-      headName: headOfficial?.name || "Ki Suryo Pringgo",
+      headName: headOfficial?.name || "Kepala Desa Pringgodani",
       headPosition: headOfficial?.position || "Kepala Desa",
-      headPhoto: profile.headPhoto || headOfficial?.photoUrl || "/images/kepala-desa.jpg",
-      headGreeting: profile.headGreeting || "Selamat datang di portal LokalUMKM Desa Pringgodani.",
-      aboutText:
-        profile.aboutText ||
-        "Desa Pringgodani berada di wilayah Kecamatan Bantur, Kabupaten Malang, Jawa Timur. Wilayah ini dianugerahi tanah yang subur untuk komoditas pertanian tebu, padi, dan palawija, serta masyarakat yang aktif memproduksi aneka produk olahan rumahan, kerajinan tangan, dan aneka usaha jasa.\n\nMelalui portal Lokal Pringgodani, Pemerintah Desa memfasilitasi publikasi produk olahan, sentra kerajinan, dan hasil bumi warga agar mudah ditemukan oleh masyarakat luas dan pembeli dari luar daerah secara langsung.",
+      headPhoto: profile.headPhoto || headOfficial?.photoUrl || "/images/placeholder-avatar.jpg",
+      headGreeting: profile.headGreeting || "",
+      aboutText: profile.aboutText || "",
       address: profile.address,
       phone: profile.phone,
       email: profile.email || "info@pringgodani.desa.id",

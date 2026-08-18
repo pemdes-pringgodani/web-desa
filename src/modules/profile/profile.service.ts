@@ -14,11 +14,12 @@ export class ProfileService {
       return {
         profile: {
           villageName: "Desa Pringgodani",
-          headGreeting: "Pemerintah Desa Pringgodani berkomitmen penuh mendukung kemajuan UMKM lokal menuju kemandirian ekonomi.",
-          headPhoto: "/images/kepala-desa.jpg",
-          headName: "Ki Suryo Pringgo",
-          headPosition: "Kepala Desa Pringgodani",
-          address: "Jl. Raya Desa Pringgodani No. 1, Bantur, Malang, Jawa Timur",
+          headGreeting: "Pemerintah Desa Pringgodani berkomitmen penuh mendukung kemajuan potensi desa bersama seluruh warga.",
+          headPhoto: "/images/placeholder-avatar.jpg",
+          headName: "Kepala Desa Pringgodani",
+          headPosition: "Kepala Desa",
+          aboutText: "",
+          address: "Jl. Raya Desa Pringgodani No. 1, Kec. Bantur, Kab. Malang, Jawa Timur",
           phone: "081234567890",
           email: "info@pringgodani.desa.id",
           officials: [],
@@ -38,13 +39,11 @@ export class ProfileService {
 
     const profile = {
       villageName: rawProfile.villageName || "Desa Pringgodani",
-      headGreeting: rawProfile.headGreeting || "Selamat datang di portal LokalUMKM Desa Pringgodani.",
-      headPhoto: rawProfile.headPhoto || "/images/kepala-desa.jpg",
+      headGreeting: rawProfile.headGreeting || "",
+      headPhoto: rawProfile.headPhoto || headOfficial?.photoUrl || "/images/placeholder-avatar.jpg",
       headName: headOfficial?.name || "Kepala Desa Pringgodani",
       headPosition: headOfficial?.position || "Kepala Desa",
-      aboutText:
-        rawProfile.aboutText ||
-        "Desa Pringgodani berada di wilayah Kecamatan Bantur, Kabupaten Malang, Jawa Timur. Wilayah ini dianugerahi tanah yang subur untuk komoditas pertanian tebu, padi, dan palawija, serta masyarakat yang aktif memproduksi aneka produk olahan rumahan, kerajinan tangan, dan aneka usaha jasa.\n\nMelalui portal Lokal Pringgodani, Pemerintah Desa memfasilitasi publikasi produk olahan, sentra kerajinan, dan hasil bumi warga agar mudah ditemukan oleh masyarakat luas dan pembeli dari luar daerah secara langsung.",
+      aboutText: rawProfile.aboutText || "",
       address: rawProfile.address,
       phone: rawProfile.phone,
       email: rawProfile.email,
