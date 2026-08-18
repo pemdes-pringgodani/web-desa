@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const articleBlockSchema = z.object({
   subHeading: z.string().nullable().optional(),
-  content: z.string().min(1, "Konten artikel (paragraf) wajib diisi"),
+  content: z.string().optional().nullable(),
   imageUrl: z.string().nullable().optional(),
   sortOrder: z.preprocess(
     (val) => (val === undefined || val === null ? 0 : Number(val)),
@@ -11,7 +11,7 @@ export const articleBlockSchema = z.object({
 });
 
 export const galleryImageSchema = z.object({
-  imageUrl: z.string().min(1, "URL foto galeri wajib diisi"),
+  imageUrl: z.string().optional().nullable(),
   imageDescription: z.string().nullable().optional(),
   sortOrder: z.preprocess(
     (val) => (val === undefined || val === null ? 0 : Number(val)),
@@ -21,13 +21,20 @@ export const galleryImageSchema = z.object({
 
 export const baseCreateNewsSchema = z.object({
   title: z.string().min(1, "Judul berita wajib diisi"),
-  newsCategoryId: z.preprocess((val) => String(val), z.string().min(1, "Kategori berita wajib dipilih")),
+  newsCategoryId: z.preprocess((val) => String(val ?? ""), z.string().min(1, "Kategori berita wajib dipilih")),
   newCategoryName: z.string().optional().nullable(),
-  newsTypeId: z.preprocess((val) => String(val), z.string().min(1, "Tipe berita wajib dipilih")),
+  newsTypeId: z.preprocess((val) => String(val ?? ""), z.string().min(1, "Tipe berita wajib dipilih")),
   newTypeName: z.string().optional().nullable(),
-  excerpt: z.string().min(1, "Ringkasan berita wajib diisi"),
+  authorName: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  coverCaption: z.string().optional().nullable(),
+  villagePotentialId: z.preprocess(
+    (val) => (val ? String(val) : null),
+    z.string().optional().nullable()
+  ),
+  excerpt: z.string().optional().nullable(),
   coverUrl: z.string().nullable().optional(),
-  status: z.enum(["DRAFT", "PENDING", "PUBLISHED"]).default("PUBLISHED"),
+  status: z.enum(["DRAFT", "PENDING", "PUBLISHED"]).default("PENDING"),
   publishedAt: z.preprocess(
     (val) => (val ? new Date(String(val)) : new Date()),
     z.date().optional()

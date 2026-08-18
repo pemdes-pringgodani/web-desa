@@ -5,11 +5,14 @@ import { AppError } from "../../../../../shared/errors/app-error";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const result = await NewsService.createNews(body);
+    const result = await NewsService.createNews({
+      ...body,
+      status: "PENDING",
+    });
 
     return ApiResponse.success(
       result,
-      "Berita berhasil dipublikasikan.",
+      "Berita berhasil diajukan dan menunggu persetujuan admin.",
       201
     );
   } catch (error: any) {

@@ -11,7 +11,8 @@ export async function PATCH(
     await requireAdmin();
     const { id } = await context.params;
     const body = await request.json();
-    const { status, rejectionReason } = body;
+    const status = body.status;
+    const rejectionReason = body.rejectionReason || body.reason || null;
 
     const result = await AdminSubmissionsService.setNewsStatus(id, status, rejectionReason);
     return ApiResponse.success(result, `Status berita berhasil diperbarui menjadi ${status}`);

@@ -107,15 +107,17 @@ export class AdminSubmissionsRepository {
 
   static async updateNewsStatus(
     id: string,
-    status: "PUBLISHED" | "REJECTED" | "DRAFT",
-    _rejectionReason?: string
+    status: "PUBLISHED" | "REJECTED" | "DRAFT" | "PENDING",
+    rejectionReason?: string
   ) {
     const newsId = BigInt(id);
+    const reason = status === "REJECTED" ? rejectionReason || null : null;
 
     return prisma.news.update({
       where: { id: newsId },
       data: {
         status,
+        rejectionReason: reason,
         publishedAt: status === "PUBLISHED" ? new Date() : undefined,
       },
     });

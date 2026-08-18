@@ -135,16 +135,6 @@ export class NewsRepository {
       };
     }
 
-    if (potentialSlug) {
-      where.newsPotentials = {
-        some: {
-          potential: {
-            slug: potentialSlug,
-          },
-        },
-      };
-    }
-
     if (search && search.trim()) {
       const q = search.trim();
       where.OR = [
@@ -191,9 +181,10 @@ export class NewsRepository {
             },
           },
         },
-        orderBy: {
-          publishedAt: "desc",
-        },
+        orderBy: [
+          { publishedAt: "desc" },
+          { id: "desc" },
+        ],
         skip,
         take: limit,
       }),
@@ -227,6 +218,7 @@ export class NewsRepository {
           ? n.publishedAt.toISOString()
           : new Date().toISOString(),
         status: n.status,
+        rejectionReason: n.rejectionReason || null,
         taggedUmkms: n.newsUmkms.map((nu) => ({
           id: nu.umkm.id.toString(),
           name: nu.umkm.name,

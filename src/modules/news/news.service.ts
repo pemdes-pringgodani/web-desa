@@ -68,26 +68,39 @@ export class NewsService {
           const newCat = await NewsRepository.createCategory({ name: cleanedCatName, slug: catSlug }, tx);
           finalCategoryId = newCat.id;
         }
-      } else {
-        if (!isNaN(Number(data.newsCategoryId))) {
-          finalCategoryId = BigInt(data.newsCategoryId);
+      } else if (!isNaN(Number(data.newsCategoryId))) {
+        const catId = BigInt(data.newsCategoryId);
+        const existing = await tx.newsCategory.findUnique({ where: { id: catId } });
+        if (existing) {
+          finalCategoryId = existing.id;
         } else {
-          let cat = await tx.newsCategory.findFirst({
-            where: {
-              OR: [
-                { slug: data.newsCategoryId.toLowerCase() },
-                { name: { equals: data.newsCategoryId, mode: "insensitive" } },
-              ],
-            },
-          });
-          if (!cat) {
-            const catSlug = await generateNewsCategorySlug(data.newsCategoryId, tx);
-            cat = await tx.newsCategory.create({
-              data: { name: data.newsCategoryId, slug: catSlug },
+          const defaultCat = await tx.newsCategory.findFirst();
+          if (defaultCat) {
+            finalCategoryId = defaultCat.id;
+          } else {
+            const created = await tx.newsCategory.create({
+              data: { name: "Umum", slug: "umum" },
             });
+            finalCategoryId = created.id;
           }
-          finalCategoryId = cat.id;
         }
+      } else {
+        const searchSlug = data.newsCategoryId.toLowerCase().trim();
+        let cat = await tx.newsCategory.findFirst({
+          where: {
+            OR: [
+              { slug: searchSlug },
+              { name: { equals: data.newsCategoryId.trim(), mode: "insensitive" } },
+            ],
+          },
+        });
+        if (!cat) {
+          const catSlug = await generateNewsCategorySlug(data.newsCategoryId, tx);
+          cat = await tx.newsCategory.create({
+            data: { name: data.newsCategoryId, slug: catSlug },
+          });
+        }
+        finalCategoryId = cat.id;
       }
 
       // 2. Handle Type
@@ -105,41 +118,67 @@ export class NewsService {
           );
           finalTypeId = newType.id;
         }
-      } else if (isNaN(Number(data.newsTypeId))) {
-        const targetSlug = data.newsTypeId.toLowerCase();
-        let existingType = await tx.newsType.findFirst({
-          where: {
-            OR: [{ slug: targetSlug }, { name: { equals: data.newsTypeId, mode: "insensitive" } }],
-          },
-        });
-        if (existingType) {
-          finalTypeId = existingType.id;
+      } else if (!isNaN(Number(data.newsTypeId))) {
+        const tId = BigInt(data.newsTypeId);
+        const existing = await tx.newsType.findUnique({ where: { id: tId } });
+        if (existing) {
+          finalTypeId = existing.id;
         } else {
           const firstType = await tx.newsType.findFirst();
           finalTypeId = firstType ? firstType.id : BigInt(1);
         }
       } else {
-        finalTypeId = BigInt(data.newsTypeId);
+        const targetSlug = data.newsTypeId.toLowerCase().trim();
+        let existingType = await tx.newsType.findFirst({
+          where: {
+            OR: [
+              { slug: targetSlug },
+              { name: { equals: data.newsTypeId.trim(), mode: "insensitive" } },
+            ],
+          },
+        });
+        if (existingType) {
+          finalTypeId = existingType.id;
+        } else {
+          const typeName =
+            data.newsTypeId === "STANDARD"
+              ? "Artikel"
+              : data.newsTypeId === "GALLERY"
+              ? "Galeri"
+              : data.newsTypeId;
+          const typeSlug = await generateNewsTypeSlug(data.newsTypeId, tx);
+          const newType = await tx.newsType.create({
+            data: { name: typeName, slug: typeSlug },
+          });
+          finalTypeId = newType.id;
+        }
       }
 
       const slug = await generateNewsSlug(data.title, tx);
 
       // 3. Create News record
+      const excerpt =
+        data.excerpt?.trim() ||
+        (data.blocks?.find((b) => b.content?.trim())?.content?.slice(0, 160) || data.title);
+
       const news = await tx.news.create({
         data: {
           title: data.title,
           slug,
           newsCategoryId: finalCategoryId,
           newsTypeId: finalTypeId,
-          excerpt: data.excerpt,
+          excerpt,
           coverUrl: data.coverUrl || null,
-          status: data.status || "PUBLISHED",
+          status: data.status || "PENDING",
           publishedAt: data.publishedAt || new Date(),
         },
       });
 
-      // 4. Create ArticleDetail & Blocks if blocks provided
-      if (data.blocks && data.blocks.length > 0) {
+      // 5. Create ArticleDetail & Blocks for valid blocks
+      const validBlocks = (data.blocks || []).filter(
+        (b) => b && b.content && b.content.trim().length > 0
+      );
+      if (validBlocks.length > 0) {
         const articleDetail = await tx.articleDetail.create({
           data: {
             newsId: news.id,
@@ -147,18 +186,21 @@ export class NewsService {
         });
 
         await tx.articleBlock.createMany({
-          data: data.blocks.map((block, idx) => ({
+          data: validBlocks.map((block, idx) => ({
             articleDetailId: articleDetail.id,
             subHeading: block.subHeading || null,
-            content: block.content,
+            content: block.content!.trim(),
             imageUrl: block.imageUrl || null,
             sortOrder: block.sortOrder ?? idx + 1,
           })),
         });
       }
 
-      // 5. Create GalleryDetail & Images if galleryImages provided
-      if (data.galleryImages && data.galleryImages.length > 0) {
+      // 6. Create GalleryDetail & Images for valid galleryImages
+      const validGallery = (data.galleryImages || []).filter(
+        (img) => img && img.imageUrl && img.imageUrl.trim().length > 0
+      );
+      if (validGallery.length > 0) {
         const galleryDetail = await tx.galleryDetail.create({
           data: {
             newsId: news.id,
@@ -166,16 +208,16 @@ export class NewsService {
         });
 
         await tx.galleryImage.createMany({
-          data: data.galleryImages.map((img, idx) => ({
+          data: validGallery.map((img, idx) => ({
             galleryDetailId: galleryDetail.id,
-            imageUrl: img.imageUrl,
+            imageUrl: img.imageUrl!.trim(),
             imageDescription: img.imageDescription || null,
             sortOrder: img.sortOrder ?? idx + 1,
           })),
         });
       }
 
-      // 6. Tagged Many-to-Many Relations
+      // 7. Tagged Many-to-Many Relations
       if (data.taggedUmkmIds && data.taggedUmkmIds.length > 0) {
         await tx.newsUmkm.createMany({
           data: data.taggedUmkmIds.map((uId) => ({
@@ -191,16 +233,6 @@ export class NewsService {
           data: data.taggedProductIds.map((pId) => ({
             newsId: news.id,
             productId: BigInt(pId),
-          })),
-          skipDuplicates: true,
-        });
-      }
-
-      if (data.taggedPotentialIds && data.taggedPotentialIds.length > 0) {
-        await tx.newsPotential.createMany({
-          data: data.taggedPotentialIds.map((potId) => ({
-            newsId: news.id,
-            potentialId: BigInt(potId),
           })),
           skipDuplicates: true,
         });
@@ -243,8 +275,12 @@ export class NewsService {
       if (payload.coverUrl !== undefined) updateData.coverUrl = payload.coverUrl;
       if (payload.status) updateData.status = payload.status;
       if (payload.publishedAt) updateData.publishedAt = payload.publishedAt;
-      if (payload.newsCategoryId) updateData.newsCategoryId = BigInt(payload.newsCategoryId);
-      if (payload.newsTypeId) updateData.newsTypeId = BigInt(payload.newsTypeId);
+      if (payload.newsCategoryId && !isNaN(Number(payload.newsCategoryId))) {
+        updateData.newsCategoryId = BigInt(payload.newsCategoryId);
+      }
+      if (payload.newsTypeId && !isNaN(Number(payload.newsTypeId))) {
+        updateData.newsTypeId = BigInt(payload.newsTypeId);
+      }
 
       const updated = await tx.news.update({
         where: { id },
@@ -260,12 +296,15 @@ export class NewsService {
           await tx.articleBlock.deleteMany({ where: { articleDetailId: art.id } });
         }
 
-        if (payload.blocks.length > 0) {
+        const validBlocks = payload.blocks.filter(
+          (b) => b && b.content && b.content.trim().length > 0
+        );
+        if (validBlocks.length > 0) {
           await tx.articleBlock.createMany({
-            data: payload.blocks.map((block, idx) => ({
+            data: validBlocks.map((block, idx) => ({
               articleDetailId: art.id,
               subHeading: block.subHeading || null,
-              content: block.content,
+              content: block.content!.trim(),
               imageUrl: block.imageUrl || null,
               sortOrder: block.sortOrder ?? idx + 1,
             })),
@@ -282,11 +321,14 @@ export class NewsService {
           await tx.galleryImage.deleteMany({ where: { galleryDetailId: gal.id } });
         }
 
-        if (payload.galleryImages.length > 0) {
+        const validGallery = payload.galleryImages.filter(
+          (img) => img && img.imageUrl && img.imageUrl.trim().length > 0
+        );
+        if (validGallery.length > 0) {
           await tx.galleryImage.createMany({
-            data: payload.galleryImages.map((img, idx) => ({
+            data: validGallery.map((img, idx) => ({
               galleryDetailId: gal.id,
-              imageUrl: img.imageUrl,
+              imageUrl: img.imageUrl!.trim(),
               imageDescription: img.imageDescription || null,
               sortOrder: img.sortOrder ?? idx + 1,
             })),
@@ -315,19 +357,6 @@ export class NewsService {
             data: payload.taggedProductIds.map((pId) => ({
               newsId: id,
               productId: BigInt(pId),
-            })),
-            skipDuplicates: true,
-          });
-        }
-      }
-
-      if (payload.taggedPotentialIds) {
-        await tx.newsPotential.deleteMany({ where: { newsId: id } });
-        if (payload.taggedPotentialIds.length > 0) {
-          await tx.newsPotential.createMany({
-            data: payload.taggedPotentialIds.map((potId) => ({
-              newsId: id,
-              potentialId: BigInt(potId),
             })),
             skipDuplicates: true,
           });
