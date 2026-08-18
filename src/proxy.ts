@@ -1,4 +1,3 @@
-import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 const DEFAULT_DEV_ORIGINS = [
@@ -8,11 +7,16 @@ const DEFAULT_DEV_ORIGINS = [
   "http://127.0.0.1:3000",
 ];
 
+function normalizeOrigin(url: string): string {
+  return url.trim().replace(/\/+$/, "").toLowerCase();
+}
+
 function isOriginAllowed(origin: string | null): boolean {
   if (!origin) return true; // Server-to-server or same-origin requests
 
-  const configuredFrontend = process.env.FRONTEND_URL?.trim();
-  const corsAllowedEnv = process.env.CORS_ALLOWED_ORIGINS?.split(",").map((o) => o.trim()).filter(Boolean) || [];
+  const normalized = normalizeOrigin(origin);
+  const configuredFrontend = process.env.FRONTEND_URL ? normalizeOrigin(process.env.FRONTEND_URL) : "";
+  const corsAllowedEnv = process.env.CORS_ALLOWED_ORIGINS?.split(",").map(normalizeOrigin).filter(Boolean) || [];
 
   const allowedSet = new Set<string>();
 
@@ -24,10 +28,26 @@ function isOriginAllowed(origin: string | null): boolean {
 
   // In development, also include localhost dev ports
   if (process.env.NODE_ENV !== "production") {
-    DEFAULT_DEV_ORIGINS.forEach((o) => allowedSet.add(o));
+    DEFAULT_DEV_ORIGINS.forEach((o) => allowedSet.add(normalizeOrigin(o)));
   }
 
-  return allowedSet.has(origin);
+  // Exact match with configured origins
+  if (allowedSet.has(normalized)) return true;
+
+  // Allow Vercel preview & production deployments for Pringgodani
+  if (
+    normalized.endsWith(".vercel.app") &&
+    (normalized.includes("pringgodani") || normalized.includes("desa") || normalized.includes("localhost"))
+  ) {
+    return true;
+  }
+
+  // Allow official Indonesian village domains (*.desa.id)
+  if (normalized.endsWith(".desa.id")) {
+    return true;
+  }
+
+  return false;
 }
 
 export async function proxy(request: NextRequest) {
@@ -36,7 +56,7 @@ export async function proxy(request: NextRequest) {
   const acceptHeader = request.headers.get("accept") || "";
   const fetchMode = request.headers.get("sec-fetch-mode") || "";
   const allowed = isOriginAllowed(origin);
-  const matchedOrigin = allowed && origin ? origin : (process.env.FRONTEND_URL || "");
+  const matchedOrigin = allowed && origin ? origin : (process.env.FRONTEND_URL || "*");
 
   // 1. Block Direct Browser Address Bar Navigation to Admin API Routes
   if (
@@ -51,13 +71,13 @@ export async function proxy(request: NextRequest) {
 
   // 2. Handle Preflight OPTIONS request instantly
   if (pathname.startsWith("/api/") && request.method === "OPTIONS") {
-    if (!allowed) {
+    if (!allowed && !pathname.startsWith("/api/public/")) {
       return new NextResponse(null, { status: 403 });
     }
     return new NextResponse(null, {
       status: 204,
       headers: {
-        "Access-Control-Allow-Origin": matchedOrigin,
+        "Access-Control-Allow-Origin": origin || matchedOrigin,
         "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, X-Api-Version",
         "Access-Control-Allow-Credentials": "true",
@@ -70,24 +90,26 @@ export async function proxy(request: NextRequest) {
   if (pathname.startsWith("/api/")) {
     const timestamp = new Date().toLocaleTimeString("id-ID");
     const query = request.nextUrl.search;
-    console.log(`[${timestamp}] 🚀 ${request.method} ${pathname}${query}`);
+    console.log(`[${timestamp}] 🚀 ${request.method} ${pathname}${query} (Origin: ${origin || "none"})`);
   }
 
   // 3. Prepare response with Security & CORS headers
-  let supabaseResponse = NextResponse.next({ request });
+  const response = NextResponse.next({ request });
 
-  // 4. Inject Security & CORS headers for API requests only if origin is allowed
+  // 4. Inject Security & CORS headers for API requests
   if (pathname.startsWith("/api/")) {
-    supabaseResponse.headers.set("X-Content-Type-Options", "nosniff");
-    if (allowed && origin) {
-      supabaseResponse.headers.set("Access-Control-Allow-Origin", matchedOrigin);
-      supabaseResponse.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
-      supabaseResponse.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, X-Api-Version");
-      supabaseResponse.headers.set("Access-Control-Allow-Credentials", "true");
+    response.headers.set("X-Content-Type-Options", "nosniff");
+    
+    // For public endpoints or whitelisted origins, set CORS headers
+    if (allowed || pathname.startsWith("/api/public/") || pathname.startsWith("/api/docs") || pathname === "/api/health") {
+      response.headers.set("Access-Control-Allow-Origin", origin || matchedOrigin);
+      response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
+      response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, X-Api-Version");
+      response.headers.set("Access-Control-Allow-Credentials", "true");
     }
   }
 
-  return supabaseResponse;
+  return response;
 }
 
 export const config = {
