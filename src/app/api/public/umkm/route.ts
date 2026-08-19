@@ -18,16 +18,16 @@ export async function GET(request: Request) {
       searchParams.get("cari") ||
       undefined;
     const exclude = searchParams.get("exclude") || undefined;
-    const status = searchParams.get("status") || "APPROVED";
     const sort = searchParams.get("sort") || undefined;
 
+    // Public endpoint must always enforce APPROVED status only
     const data = await UmkmService.getAllUmkm({
       page,
       limit,
       category,
       search,
       exclude,
-      status,
+      status: "APPROVED",
       sort,
     });
 

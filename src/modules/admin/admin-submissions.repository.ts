@@ -125,7 +125,7 @@ export class AdminSubmissionsRepository {
 
   static async updateUmkmStatus(
     id: string,
-    status: "APPROVED" | "REJECTED" | "PENDING",
+    status: "APPROVED" | "REJECTED" | "PENDING" | "DRAFT",
     rejectionReason?: string
   ) {
     const umkmId = BigInt(id);

@@ -18,10 +18,13 @@ export class NewsService {
     return NewsRepository.findAllPaginated(params);
   }
 
-  static async getNewsBySlug(slug: string) {
+  static async getNewsBySlug(slug: string, requirePublished = true) {
     const news = await NewsRepository.findBySlug(slug);
     if (!news) {
       throw new NotFoundError(`Berita dengan slug '${slug}' tidak ditemukan`);
+    }
+    if (requirePublished && !["PUBLISHED", "published", "Published"].includes(news.status)) {
+      throw new NotFoundError(`Berita '${slug}' tidak ditemukan atau belum dipublikasikan`);
     }
     return news;
   }
@@ -273,7 +276,15 @@ export class NewsService {
       if (payload.title) updateData.title = payload.title;
       if (payload.excerpt) updateData.excerpt = payload.excerpt;
       if (payload.coverUrl !== undefined) updateData.coverUrl = payload.coverUrl;
-      if (payload.status) updateData.status = payload.status;
+      if (payload.status) {
+        updateData.status = payload.status.toUpperCase();
+        if (updateData.status === "PUBLISHED") {
+          updateData.publishedAt = existing.publishedAt || new Date();
+          updateData.rejectionReason = null;
+        } else if (updateData.status === "DRAFT" || updateData.status === "PENDING") {
+          updateData.rejectionReason = null;
+        }
+      }
       if (payload.publishedAt) updateData.publishedAt = payload.publishedAt;
       if (payload.newsCategoryId && !isNaN(Number(payload.newsCategoryId))) {
         updateData.newsCategoryId = BigInt(payload.newsCategoryId);

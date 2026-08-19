@@ -7,13 +7,14 @@ export class AdminSubmissionsService {
   }
 
   static async setNewsStatus(id: string, status: string, rejectionReason?: string) {
+    const upperStatus = status.toUpperCase();
     const validStatuses = ["PUBLISHED", "REJECTED", "DRAFT", "PENDING"];
-    if (!validStatuses.includes(status)) {
+    if (!validStatuses.includes(upperStatus)) {
       throw new ValidationError(`Status berita '${status}' tidak valid`);
     }
     const updated = await AdminSubmissionsRepository.updateNewsStatus(
       id,
-      status as "PUBLISHED" | "REJECTED" | "DRAFT",
+      upperStatus as "PUBLISHED" | "REJECTED" | "DRAFT" | "PENDING",
       rejectionReason
     );
     if (!updated) {
@@ -27,13 +28,14 @@ export class AdminSubmissionsService {
   }
 
   static async setUmkmStatus(id: string, status: string, rejectionReason?: string) {
-    const validStatuses = ["APPROVED", "REJECTED", "PENDING"];
-    if (!validStatuses.includes(status)) {
+    const upperStatus = status.toUpperCase();
+    const validStatuses = ["APPROVED", "REJECTED", "PENDING", "DRAFT"];
+    if (!validStatuses.includes(upperStatus)) {
       throw new ValidationError(`Status UMKM '${status}' tidak valid`);
     }
     const updated = await AdminSubmissionsRepository.updateUmkmStatus(
       id,
-      status as "APPROVED" | "REJECTED" | "PENDING",
+      upperStatus as "APPROVED" | "REJECTED" | "PENDING" | "DRAFT",
       rejectionReason
     );
     if (!updated) {

@@ -357,6 +357,8 @@ export class NewsRepository {
       taggedUmkms,
       taggedProducts,
       taggedPotentials: [],
+      status: n.status,
+      rejectionReason: n.rejectionReason || null,
       publishedAt: n.publishedAt
         ? n.publishedAt.toISOString()
         : new Date().toISOString(),

@@ -97,15 +97,23 @@ export class UmkmService {
               ? (input.mapsUrl?.trim() || null)
               : existing.mapsUrl,
           coverUrl: input.coverUrl ?? existing.coverUrl,
-          status: input.status ?? existing.status,
-          rejectionReason: input.rejectionReason !== undefined ? input.rejectionReason : existing.rejectionReason,
+          status: input.status ? input.status.toUpperCase() : existing.status,
+          rejectionReason:
+            input.status === "APPROVED" || input.status === "DRAFT" || input.status === "PENDING"
+              ? null
+              : input.rejectionReason !== undefined
+              ? input.rejectionReason
+              : existing.rejectionReason,
           since: input.since !== undefined ? input.since : existing.since,
           openDay: input.openDay !== undefined ? input.openDay : existing.openDay,
           startTime: input.startTime ? new Date(`1970-01-01T${input.startTime}:00Z`) : existing.startTime,
           endTime: input.endTime ? new Date(`1970-01-01T${input.endTime}:00Z`) : existing.endTime,
           latitude: input.latitude !== undefined ? Number(input.latitude) : existing.latitude,
           longitude: input.longitude !== undefined ? Number(input.longitude) : existing.longitude,
-          publishedAt: input.status === "APPROVED" && !existing.publishedAt ? new Date() : existing.publishedAt,
+          publishedAt:
+            input.status === "APPROVED"
+              ? existing.publishedAt || new Date()
+              : existing.publishedAt,
         },
       });
 
@@ -147,10 +155,13 @@ export class UmkmService {
     return UmkmRepository.findAllPaginated(params);
   }
 
-  static async getUmkmBySlug(slug: string) {
+  static async getUmkmBySlug(slug: string, requireApproved = true) {
     const umkm = await UmkmRepository.findBySlug(slug);
     if (!umkm) {
       throw new NotFoundError(`UMKM dengan slug '${slug}' tidak ditemukan`);
+    }
+    if (requireApproved && !["APPROVED", "approved", "Approved"].includes(umkm.status)) {
+      throw new NotFoundError(`UMKM '${slug}' tidak ditemukan atau belum dipublikasikan`);
     }
     return umkm;
   }

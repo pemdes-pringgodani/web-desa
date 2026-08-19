@@ -19,11 +19,11 @@ export async function GET(request: Request) {
       searchParams.get("cari") ||
       undefined;
     const exclude = searchParams.get("exclude") || undefined;
-    const status = searchParams.get("status") || "PUBLISHED";
     const sort = searchParams.get("sort") || undefined;
     const umkmSlug = searchParams.get("umkmSlug") || searchParams.get("umkm") || undefined;
     const potentialSlug = searchParams.get("potentialSlug") || searchParams.get("potential") || undefined;
 
+    // Public endpoint must always enforce PUBLISHED status only
     const news = await NewsService.getAllNews({
       page,
       limit,
@@ -31,7 +31,7 @@ export async function GET(request: Request) {
       type,
       search,
       exclude,
-      status,
+      status: "PUBLISHED",
       sort,
       umkmSlug,
       potentialSlug,

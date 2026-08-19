@@ -133,13 +133,16 @@ export class ProductsRepository {
     });
 
     if (!p) return null;
+    if (p.umkm && !["APPROVED", "approved", "Approved"].includes(p.umkm.status)) {
+      return null;
+    }
 
     const otherRaw = await prisma.product.findMany({
       where: {
         umkmId: p.umkmId,
         NOT: { id },
         umkm: {
-          status: "APPROVED",
+          status: { in: ["APPROVED", "approved", "Approved"] },
         },
       },
       take: 6,
