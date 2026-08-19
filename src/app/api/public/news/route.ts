@@ -20,6 +20,7 @@ export async function GET(request: Request) {
       undefined;
     const exclude = searchParams.get("exclude") || undefined;
     const status = searchParams.get("status") || "PUBLISHED";
+    const sort = searchParams.get("sort") || undefined;
     const umkmSlug = searchParams.get("umkmSlug") || searchParams.get("umkm") || undefined;
     const potentialSlug = searchParams.get("potentialSlug") || searchParams.get("potential") || undefined;
 
@@ -31,6 +32,7 @@ export async function GET(request: Request) {
       search,
       exclude,
       status,
+      sort,
       umkmSlug,
       potentialSlug,
     });

@@ -10,6 +10,7 @@ export interface FindAllUmkmParams {
   exclude?: string;
   status?: string;
   potentialSlug?: string;
+  sort?: string;
 }
 
 export class UmkmRepository {
@@ -49,6 +50,7 @@ export class UmkmRepository {
     exclude,
     status = "APPROVED",
     potentialSlug,
+    sort,
   }: FindAllUmkmParams = {}) {
     const where: any = {};
 
@@ -87,7 +89,16 @@ export class UmkmRepository {
     }
 
     if (status && status !== "ALL") {
-      where.status = status;
+      where.status = { in: [status, status.toUpperCase(), status.toLowerCase()] };
+    }
+
+    let orderBy: any = { id: "desc" };
+    if (sort === "publishedAt_desc" || sort === "newest") {
+      orderBy = [{ publishedAt: "desc" }, { id: "desc" }];
+    } else if (sort === "name_asc") {
+      orderBy = { name: "asc" };
+    } else if (sort === "name_desc") {
+      orderBy = { name: "desc" };
     }
 
     const skip = (page - 1) * limit;
@@ -103,9 +114,7 @@ export class UmkmRepository {
             },
           },
         },
-        orderBy: {
-          id: "desc",
-        },
+        orderBy,
         skip,
         take: limit,
       }),

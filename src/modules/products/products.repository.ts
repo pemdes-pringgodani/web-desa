@@ -14,7 +14,7 @@ export class ProductsRepository {
   }: Partial<FindAllProductsParams> = {}) {
     const where: any = {
       umkm: {
-        status: "APPROVED",
+        status: { in: ["APPROVED", "approved", "Approved"] },
       },
     };
 

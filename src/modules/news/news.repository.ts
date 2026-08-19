@@ -9,6 +9,7 @@ export interface FindAllNewsParams {
   search?: string;
   exclude?: string;
   status?: string;
+  sort?: string;
   umkmSlug?: string;
   potentialSlug?: string;
 }
@@ -90,13 +91,14 @@ export class NewsRepository {
     search,
     exclude,
     status = "PUBLISHED",
+    sort,
     umkmSlug,
     potentialSlug,
   }: FindAllNewsParams = {}) {
     const where: any = {};
 
     if (status && status !== "ALL") {
-      where.status = status;
+      where.status = { in: [status, status.toUpperCase(), status.toLowerCase()] };
     }
 
     if (category) {
