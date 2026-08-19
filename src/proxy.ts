@@ -71,7 +71,13 @@ export async function proxy(request: NextRequest) {
 
   // 2. Handle Preflight OPTIONS request instantly
   if (pathname.startsWith("/api/") && request.method === "OPTIONS") {
-    if (!allowed && !pathname.startsWith("/api/public/")) {
+    if (
+      !allowed &&
+      !pathname.startsWith("/api/public/") &&
+      !pathname.startsWith("/api/uploads") &&
+      !pathname.startsWith("/api/docs") &&
+      pathname !== "/api/health"
+    ) {
       return new NextResponse(null, { status: 403 });
     }
     return new NextResponse(null, {
@@ -100,8 +106,14 @@ export async function proxy(request: NextRequest) {
   if (pathname.startsWith("/api/")) {
     response.headers.set("X-Content-Type-Options", "nosniff");
     
-    // For public endpoints or whitelisted origins, set CORS headers
-    if (allowed || pathname.startsWith("/api/public/") || pathname.startsWith("/api/docs") || pathname === "/api/health") {
+    // For public endpoints, uploads, or whitelisted origins, set CORS headers
+    if (
+      allowed ||
+      pathname.startsWith("/api/public/") ||
+      pathname.startsWith("/api/uploads") ||
+      pathname.startsWith("/api/docs") ||
+      pathname === "/api/health"
+    ) {
       response.headers.set("Access-Control-Allow-Origin", origin || matchedOrigin);
       response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
       response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, X-Api-Version");

@@ -6,6 +6,8 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const origin = request.headers.get("origin") || "*";
+
   try {
     const { searchParams } = new URL(request.url);
     const formData = await request.formData();
@@ -18,16 +20,23 @@ export async function POST(request: Request) {
       undefined;
 
     const result = await StorageService.uploadFile(file, categoryParam);
-    return ApiResponse.success(result, "File berhasil diunggah", 201);
+    const res = ApiResponse.success(result, "File berhasil diunggah", 201);
+    res.headers.set("Access-Control-Allow-Origin", origin);
+    res.headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+    return res;
   } catch (error: any) {
     if (error instanceof AppError) {
-      return ApiResponse.error(error.message, error.statusCode, error.errors);
+      const res = ApiResponse.error(error.message, error.statusCode, error.errors);
+      res.headers.set("Access-Control-Allow-Origin", origin);
+      return res;
     }
     console.error("Upload API error:", error);
-    return ApiResponse.error(
+    const res = ApiResponse.error(
       error?.message || "Terjadi kesalahan saat mengunggah berkas",
       500
     );
+    res.headers.set("Access-Control-Allow-Origin", origin);
+    return res;
   }
 }
 

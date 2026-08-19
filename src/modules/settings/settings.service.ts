@@ -4,9 +4,14 @@ export class SettingsService {
   static async getSettings() {
     const raw = await SettingsRepository.getSetting();
 
+    const resolvedLogoUrl =
+      !raw?.logoUrl || raw.logoUrl === "/images/logo-desa.png"
+        ? "/images/logo.png"
+        : raw.logoUrl;
+
     const settings: Record<string, unknown> = {
       website_name: raw?.websiteName || "Lokal Pringgodani",
-      logo_url: raw?.logoUrl || "/images/logo.png",
+      logo_url: resolvedLogoUrl,
       favicon_url: raw?.faviconUrl || "/favicon.ico",
       contact_email: raw?.email || "info@pringgodani.desa.id",
       contact_phone: raw?.phone || "081234567890",
