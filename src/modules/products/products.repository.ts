@@ -13,47 +13,57 @@ export class ProductsRepository {
     sort = "newest",
   }: Partial<FindAllProductsParams> = {}) {
     const where: any = {
-      umkm: {
-        status: { in: ["APPROVED", "approved", "Approved"] },
-      },
+      AND: [
+        {
+          umkm: {
+            status: { in: ["APPROVED", "approved", "Approved"] },
+          },
+        },
+      ],
     };
 
     if (category) {
       if (!isNaN(Number(category))) {
-        where.umkm = {
-          ...where.umkm,
-          umkmCategoryId: BigInt(category),
-        };
-      } else {
-        where.umkm = {
-          ...where.umkm,
-          category: {
-            slug: category,
+        where.AND.push({
+          umkm: {
+            umkmCategoryId: BigInt(category),
           },
-        };
+        });
+      } else {
+        where.AND.push({
+          umkm: {
+            category: {
+              slug: category,
+            },
+          },
+        });
       }
     }
 
     if (umkmSlug) {
-      where.umkm = {
-        ...where.umkm,
-        slug: umkmSlug,
-      };
+      where.AND.push({
+        umkm: {
+          slug: umkmSlug,
+        },
+      });
     }
 
     if (search && search.trim()) {
       const q = search.trim();
-      where.OR = [
-        { name: { contains: q, mode: "insensitive" } },
-        { description: { contains: q, mode: "insensitive" } },
-        { umkm: { name: { contains: q, mode: "insensitive" } } },
-      ];
+      where.AND.push({
+        OR: [
+          { name: { contains: q, mode: "insensitive" } },
+          { description: { contains: q, mode: "insensitive" } },
+          { umkm: { name: { contains: q, mode: "insensitive" } } },
+        ],
+      });
     }
 
     if (minPrice !== undefined || maxPrice !== undefined) {
-      where.price = {};
-      if (minPrice !== undefined) where.price.gte = minPrice;
-      if (maxPrice !== undefined) where.price.lte = maxPrice;
+      const priceFilter: any = {};
+      if (minPrice !== undefined) priceFilter.gte = minPrice;
+      if (maxPrice !== undefined) priceFilter.lte = maxPrice;
+      where.AND.push({ price: priceFilter });
     }
 
     let orderBy: any = { id: "desc" };

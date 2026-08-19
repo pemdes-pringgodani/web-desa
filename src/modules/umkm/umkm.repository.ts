@@ -52,44 +52,52 @@ export class UmkmRepository {
     potentialSlug,
     sort,
   }: FindAllUmkmParams = {}) {
-    const where: any = {};
+    const where: any = { AND: [] };
+
+    if (status && status !== "ALL") {
+      where.AND.push({
+        status: { in: [status, status.toUpperCase(), status.toLowerCase()] },
+      });
+    }
 
     if (category) {
       if (!isNaN(Number(category))) {
-        where.umkmCategoryId = BigInt(category);
+        where.AND.push({ umkmCategoryId: BigInt(category) });
       } else {
-        where.category = {
-          slug: category,
-        };
+        where.AND.push({
+          category: {
+            slug: category,
+          },
+        });
       }
     }
 
     if (potentialSlug) {
-      where.potential = {
-        slug: potentialSlug,
-      };
+      where.AND.push({
+        potential: {
+          slug: potentialSlug,
+        },
+      });
     }
 
     if (search && search.trim()) {
       const query = search.trim();
-      where.OR = [
-        { name: { contains: query, mode: "insensitive" } },
-        { description: { contains: query, mode: "insensitive" } },
-        { ownerName: { contains: query, mode: "insensitive" } },
-        { address: { contains: query, mode: "insensitive" } },
-      ];
+      where.AND.push({
+        OR: [
+          { name: { contains: query, mode: "insensitive" } },
+          { description: { contains: query, mode: "insensitive" } },
+          { ownerName: { contains: query, mode: "insensitive" } },
+          { address: { contains: query, mode: "insensitive" } },
+        ],
+      });
     }
 
     if (exclude) {
       if (!isNaN(Number(exclude))) {
-        where.id = { not: BigInt(exclude) };
+        where.AND.push({ id: { not: BigInt(exclude) } });
       } else {
-        where.slug = { not: exclude };
+        where.AND.push({ slug: { not: exclude } });
       }
-    }
-
-    if (status && status !== "ALL") {
-      where.status = { in: [status, status.toUpperCase(), status.toLowerCase()] };
     }
 
     let orderBy: any = { id: "desc" };

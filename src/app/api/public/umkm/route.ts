@@ -2,6 +2,8 @@ import { UmkmService } from "../../../../modules/umkm/umkm.service";
 import { ApiResponse } from "../../../../shared/utils/response";
 import { AppError } from "../../../../shared/errors/app-error";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -32,7 +34,7 @@ export async function GET(request: Request) {
     });
 
     const response = ApiResponse.success(data);
-    response.headers.set("Cache-Control", "public, s-maxage=300, stale-while-revalidate=600");
+    response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
     return response;
   } catch (error: any) {
     if (error instanceof AppError) {

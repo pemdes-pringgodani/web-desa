@@ -2,6 +2,8 @@ import { NewsService } from "../../../../modules/news/news.service";
 import { ApiResponse } from "../../../../shared/utils/response";
 import { AppError } from "../../../../shared/errors/app-error";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -37,7 +39,7 @@ export async function GET(request: Request) {
       potentialSlug,
     });
     const response = ApiResponse.success(news);
-    response.headers.set("Cache-Control", "public, s-maxage=120, stale-while-revalidate=300");
+    response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
     return response;
   } catch (error: any) {
     if (error instanceof AppError) {

@@ -95,53 +95,62 @@ export class NewsRepository {
     umkmSlug,
     potentialSlug,
   }: FindAllNewsParams = {}) {
-    const where: any = {};
+    const where: any = { AND: [] };
 
     if (status && status !== "ALL") {
-      where.status = { in: [status, status.toUpperCase(), status.toLowerCase()] };
+      where.AND.push({
+        status: { in: [status, status.toUpperCase(), status.toLowerCase()] },
+      });
     }
 
     if (category) {
       if (!isNaN(Number(category))) {
-        where.newsCategoryId = BigInt(category);
+        where.AND.push({ newsCategoryId: BigInt(category) });
       } else {
-        where.category = {
-          slug: category,
-        };
+        where.AND.push({
+          category: {
+            slug: category,
+          },
+        });
       }
     }
 
     if (type) {
       if (!isNaN(Number(type))) {
-        where.newsTypeId = BigInt(type);
+        where.AND.push({ newsTypeId: BigInt(type) });
       } else {
-        where.type = { slug: type };
+        where.AND.push({ type: { slug: type } });
       }
     }
 
     if (umkmSlug) {
-      where.newsUmkms = {
-        some: {
-          umkm: {
-            slug: umkmSlug,
+      where.AND.push({
+        newsUmkms: {
+          some: {
+            umkm: {
+              slug: umkmSlug,
+              status: { in: ["APPROVED", "approved", "Approved"] },
+            },
           },
         },
-      };
+      });
     }
 
     if (search && search.trim()) {
       const q = search.trim();
-      where.OR = [
-        { title: { contains: q, mode: "insensitive" } },
-        { excerpt: { contains: q, mode: "insensitive" } },
-      ];
+      where.AND.push({
+        OR: [
+          { title: { contains: q, mode: "insensitive" } },
+          { excerpt: { contains: q, mode: "insensitive" } },
+        ],
+      });
     }
 
     if (exclude) {
       if (!isNaN(Number(exclude))) {
-        where.id = { not: BigInt(exclude) };
+        where.AND.push({ id: { not: BigInt(exclude) } });
       } else {
-        where.slug = { not: exclude };
+        where.AND.push({ slug: { not: exclude } });
       }
     }
 
@@ -250,6 +259,7 @@ export class NewsRepository {
                 coverUrl: true,
                 phone: true,
                 address: true,
+                status: true,
               },
             },
           },
@@ -266,6 +276,7 @@ export class NewsRepository {
                   select: {
                     name: true,
                     slug: true,
+                    status: true,
                   },
                 },
               },
@@ -312,23 +323,31 @@ export class NewsRepository {
         caption: img.imageDescription || null,
       })) || [];
 
-    const taggedUmkms = n.newsUmkms.map((nu) => ({
-      id: nu.umkm.id.toString(),
-      name: nu.umkm.name,
-      slug: nu.umkm.slug,
-      coverUrl: nu.umkm.coverUrl || "/images/placeholder-umkm.jpg",
-      phone: nu.umkm.phone,
-      address: nu.umkm.address,
-    }));
+    const taggedUmkms = (n.newsUmkms || [])
+      .filter((nu) => nu.umkm && ["APPROVED", "approved", "Approved"].includes(nu.umkm.status))
+      .map((nu) => ({
+        id: nu.umkm.id.toString(),
+        name: nu.umkm.name,
+        slug: nu.umkm.slug,
+        coverUrl: nu.umkm.coverUrl || "/images/placeholder-umkm.jpg",
+        phone: nu.umkm.phone,
+        address: nu.umkm.address,
+      }));
 
-    const taggedProducts = n.newsProducts.map((np) => ({
-      id: np.product.id.toString(),
-      name: np.product.name,
-      price: np.product.price ? Number(np.product.price) : null,
-      imageUrl: np.product.imageUrl || "/images/placeholder-product.jpg",
-      umkmName: np.product.umkm?.name,
-      umkmSlug: np.product.umkm?.slug,
-    }));
+    const taggedProducts = (n.newsProducts || [])
+      .filter(
+        (np) =>
+          np.product?.umkm &&
+          ["APPROVED", "approved", "Approved"].includes(np.product.umkm.status)
+      )
+      .map((np) => ({
+        id: np.product.id.toString(),
+        name: np.product.name,
+        price: np.product.price ? Number(np.product.price) : null,
+        imageUrl: np.product.imageUrl || "/images/placeholder-product.jpg",
+        umkmName: np.product.umkm?.name,
+        umkmSlug: np.product.umkm?.slug,
+      }));
 
     const totalWords = contentSections.reduce(
       (acc, curr) => acc + (curr.paragraph || "").split(/\s+/).length,

@@ -2,6 +2,8 @@ import { ProductsService } from "../../../../modules/products/products.service";
 import { ApiResponse } from "../../../../shared/utils/response";
 import { AppError } from "../../../../shared/errors/app-error";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -29,7 +31,7 @@ export async function GET(request: Request) {
 
     const data = await ProductsService.getAllProducts(params);
     const response = ApiResponse.success(data);
-    response.headers.set("Cache-Control", "public, s-maxage=60, stale-while-revalidate=120");
+    response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
     return response;
   } catch (error: any) {
     if (error instanceof AppError) {

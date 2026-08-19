@@ -43,22 +43,28 @@ export class MapsRepository {
 
   static async findLocations(categorySlug?: string, searchQuery?: string) {
     const where: any = {
-      status: "APPROVED",
-      latitude: { not: null },
-      longitude: { not: null },
+      AND: [
+        {
+          status: { in: ["APPROVED", "approved", "Approved"] },
+          latitude: { not: null },
+          longitude: { not: null },
+        },
+      ],
     };
 
     if (categorySlug && categorySlug !== "all") {
-      where.category = { slug: categorySlug };
+      where.AND.push({ category: { slug: categorySlug } });
     }
 
     if (searchQuery && searchQuery.trim()) {
       const q = searchQuery.trim();
-      where.OR = [
-        { name: { contains: q, mode: "insensitive" } },
-        { description: { contains: q, mode: "insensitive" } },
-        { address: { contains: q, mode: "insensitive" } },
-      ];
+      where.AND.push({
+        OR: [
+          { name: { contains: q, mode: "insensitive" } },
+          { description: { contains: q, mode: "insensitive" } },
+          { address: { contains: q, mode: "insensitive" } },
+        ],
+      });
     }
 
     const locations = await prisma.umkm.findMany({
