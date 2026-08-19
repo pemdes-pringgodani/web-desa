@@ -14,10 +14,18 @@ export class StorageService {
       throw new ValidationError("Ukuran file maksimal adalah 15MB");
     }
 
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-    if (!allowedTypes.includes(file.type)) {
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+      "image/heic",
+      "image/heif",
+      "image/avif",
+    ];
+    if (file.type && !allowedTypes.includes(file.type) && !file.type.startsWith("image/")) {
       throw new ValidationError(
-        "Format file tidak didukung. Harap unggah gambar (JPG, PNG, WEBP, atau GIF)"
+        "Format file tidak didukung. Harap unggah berkas gambar (JPG, PNG, WEBP, HEIC, GIF)"
       );
     }
 
