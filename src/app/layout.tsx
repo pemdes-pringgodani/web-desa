@@ -10,6 +10,11 @@ export const metadata: Metadata = {
       "google-site-verification": ["googlea9c207ee32eba86b", "googlea9c207ee32eba86b.html"],
     },
   },
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
@@ -20,6 +25,7 @@ export default function RootLayout({
   return (
     <html lang="id" className="h-full antialiased font-sans">
       <head>
+        <link rel="icon" href="/favicon.ico" />
         <meta name="google-site-verification" content="googlea9c207ee32eba86b" />
         <meta name="google-site-verification" content="googlea9c207ee32eba86b.html" />
       </head>
