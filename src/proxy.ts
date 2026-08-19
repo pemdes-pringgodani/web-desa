@@ -34,17 +34,23 @@ function isOriginAllowed(origin: string | null): boolean {
   // Exact match with configured origins
   if (allowedSet.has(normalized)) return true;
 
-  // Allow Vercel preview & production deployments for Pringgodani
-  if (
-    normalized.endsWith(".vercel.app") &&
-    (normalized.includes("pringgodani") || normalized.includes("desa") || normalized.includes("localhost"))
-  ) {
-    return true;
-  }
+  // Allow official village & project domains (*.lokalpringgodani.my.id, *.desa.id)
+  try {
+    const parsed = new URL(normalized);
+    const host = parsed.hostname;
+    if (
+      host === "lokalpringgodani.my.id" ||
+      host.endsWith(".lokalpringgodani.my.id") ||
+      host.endsWith(".desa.id")
+    ) {
+      return true;
+    }
 
-  // Allow official Indonesian village domains (*.desa.id)
-  if (normalized.endsWith(".desa.id")) {
-    return true;
+    if (host.endsWith(".vercel.app") && host.includes("pringgodani")) {
+      return true;
+    }
+  } catch {
+    return false;
   }
 
   return false;

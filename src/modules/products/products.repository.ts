@@ -71,7 +71,9 @@ export class ProductsRepository {
     else if (sort === "price_desc") orderBy = { price: "desc" };
     else if (sort === "name_asc") orderBy = { name: "asc" };
 
-    const skip = (page - 1) * limit;
+    const safePage = Math.max(1, Math.floor(Number(page) || 1));
+    const safeLimit = Math.min(100, Math.max(1, Math.floor(Number(limit) || 8)));
+    const skip = (safePage - 1) * safeLimit;
 
     const [rawItems, total] = await Promise.all([
       prisma.product.findMany({
@@ -85,7 +87,7 @@ export class ProductsRepository {
         },
         orderBy,
         skip,
-        take: limit,
+        take: safeLimit,
       }),
       prisma.product.count({ where }),
     ]);
@@ -124,9 +126,9 @@ export class ProductsRepository {
     return {
       items,
       total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit) || 1,
+      page: safePage,
+      limit: safeLimit,
+      totalPages: Math.ceil(total / safeLimit) || 1,
     };
   }
 

@@ -166,7 +166,9 @@ export class NewsRepository {
       }
     }
 
-    const skip = (page - 1) * limit;
+    const safePage = Math.max(1, Math.floor(Number(page) || 1));
+    const safeLimit = Math.min(100, Math.max(1, Math.floor(Number(limit) || 10)));
+    const skip = (safePage - 1) * safeLimit;
 
     const [rawNews, total] = await Promise.all([
       prisma.news.findMany({
@@ -201,7 +203,7 @@ export class NewsRepository {
           { id: "desc" },
         ],
         skip,
-        take: limit,
+        take: safeLimit,
       }),
       prisma.news.count({ where }),
     ]);
@@ -213,9 +215,6 @@ export class NewsRepository {
         n.galleryDetail?.images?.[0]?.imageUrl ||
         "/images/placeholder-news.jpg";
 
-      const catName = n.category?.name || "Kabar UMKM";
-      const catSlug = n.category?.slug || "kabar-umkm";
-
       return {
         id: n.id.toString(),
         title: n.title,
@@ -224,25 +223,37 @@ export class NewsRepository {
         summary: n.excerpt,
         coverUrl: cover,
         coverImage: cover,
-        categoryName: catName,
-        categorySlug: catSlug,
+        category: n.category?.name || "Berita",
+        categorySlug: n.category?.slug || "berita",
+        categoryName: n.category?.name || "Berita",
+        type: n.type?.name || "Artikel",
+        typeSlug: n.type?.slug || "artikel",
         typeName: n.type?.name || "Artikel",
-        typeSlug: n.type?.slug || "article",
-        authorName: "Humas Desa Pringgodani",
-        publishedAt: n.publishedAt
-          ? n.publishedAt.toISOString()
-          : new Date().toISOString(),
         status: n.status,
         rejectionReason: n.rejectionReason || null,
+        publishedAt: n.publishedAt?.toISOString() || null,
+        contentSections: n.articleDetail?.blocks?.map((b) => ({
+          id: b.id.toString(),
+          title: b.subHeading || "",
+          body: b.content,
+          imageUrl: b.imageUrl || null,
+        })) || [],
+        galleryImages: n.galleryDetail?.images?.map((g) => ({
+          id: g.id.toString(),
+          imageUrl: g.imageUrl,
+          caption: g.imageDescription || null,
+        })) || [],
         taggedUmkms: n.newsUmkms.map((nu) => ({
           id: nu.umkm.id.toString(),
           name: nu.umkm.name,
           slug: nu.umkm.slug,
         })),
+        taggedProducts: [],
+        taggedPotentials: [],
       };
     });
 
-    return { items, total, page, limit, totalPages: Math.ceil(total / limit) || 1 };
+    return { items, total, page: safePage, limit: safeLimit, totalPages: Math.ceil(total / safeLimit) || 1 };
   }
 
   static async findBySlug(slug: string) {

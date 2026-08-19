@@ -1,9 +1,20 @@
 import { AuthService } from "../../../../modules/auth/auth.service";
 import { ApiResponse } from "../../../../shared/utils/response";
 import { AppError } from "../../../../shared/errors/app-error";
+import { checkRateLimit } from "../../../../shared/utils/rate-limiter";
 
 export async function POST(request: Request) {
   try {
+    const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown-client";
+    const limitCheck = checkRateLimit(`login:${clientIp}`, 10, 60 * 1000); // 10 attempts per minute
+
+    if (!limitCheck.allowed) {
+      return ApiResponse.error(
+        `Terlalu banyak percobaan login. Silakan tunggu ${limitCheck.retryAfterSeconds} detik lagi.`,
+        429
+      );
+    }
+
     const body = await request.json();
     const { user, session } = await AuthService.signIn(body);
 

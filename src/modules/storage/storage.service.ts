@@ -23,9 +23,9 @@ export class StorageService {
       "image/heif",
       "image/avif",
     ];
-    if (file.type && !allowedTypes.includes(file.type) && !file.type.startsWith("image/")) {
+    if (!file.type || !allowedTypes.includes(file.type.toLowerCase())) {
       throw new ValidationError(
-        "Format file tidak didukung. Harap unggah berkas gambar (JPG, PNG, WEBP, HEIC, GIF)"
+        "Format file tidak didukung. Harap unggah berkas gambar yang valid (JPG, PNG, WEBP, HEIC, GIF, AVIF)"
       );
     }
 
@@ -189,11 +189,15 @@ export class StorageService {
       }
     }
 
-    // 1. Delete from local storage if any
+    // 1. Delete from local storage if any (with strict path traversal guard)
+    const baseUploadDir = path.resolve(process.cwd(), "public", "uploads");
     for (const { bucket, filePath } of localFiles) {
       try {
-        const fullPath = path.join(process.cwd(), "public", "uploads", bucket, filePath);
-        if (fs.existsSync(fullPath)) {
+        const safeBucket = bucket.replace(/[^a-zA-Z0-9_-]/g, "");
+        const safeFilePath = path.normalize(filePath).replace(/^(\.\.(\/|\\|$))+/, "");
+        const fullPath = path.resolve(baseUploadDir, safeBucket, safeFilePath);
+
+        if (fullPath.startsWith(baseUploadDir) && fs.existsSync(fullPath)) {
           fs.unlinkSync(fullPath);
         }
       } catch (err: any) {

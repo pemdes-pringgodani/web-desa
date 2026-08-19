@@ -1,8 +1,19 @@
 import { prisma } from "../../../../../shared/db/client";
 import { ApiResponse } from "../../../../../shared/utils/response";
+import { checkRateLimit } from "../../../../../shared/utils/rate-limiter";
 
 export async function GET(request: Request) {
   try {
+    const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown-client";
+    const limitCheck = checkRateLimit(`status:${clientIp}`, 30, 60 * 1000); // 30 requests per minute
+
+    if (!limitCheck.allowed) {
+      return ApiResponse.error(
+        `Terlalu banyak permintaan. Silakan tunggu ${limitCheck.retryAfterSeconds} detik.`,
+        429
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type")?.toUpperCase();
     const id = searchParams.get("id");

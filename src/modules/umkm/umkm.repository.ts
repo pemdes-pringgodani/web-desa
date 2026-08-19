@@ -121,7 +121,9 @@ export class UmkmRepository {
       orderBy = { name: "desc" };
     }
 
-    const skip = (page - 1) * limit;
+    const safePage = Math.max(1, Math.floor(Number(page) || 1));
+    const safeLimit = Math.min(100, Math.max(1, Math.floor(Number(limit) || 8)));
+    const skip = (safePage - 1) * safeLimit;
 
     const [rawItems, total] = await Promise.all([
       prisma.umkm.findMany({
@@ -136,7 +138,7 @@ export class UmkmRepository {
         },
         orderBy,
         skip,
-        take: limit,
+        take: safeLimit,
       }),
       prisma.umkm.count({ where }),
     ]);
@@ -181,9 +183,9 @@ export class UmkmRepository {
     return {
       items,
       total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit) || 1,
+      page: safePage,
+      limit: safeLimit,
+      totalPages: Math.ceil(total / safeLimit) || 1,
     };
   }
 
