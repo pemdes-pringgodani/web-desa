@@ -15,15 +15,27 @@ export interface FindAllNewsParams {
 }
 
 export class NewsRepository {
-  static async findAllCategories(includeAll = true) {
-    const where = {};
+  static async findAllCategories(includeAll = false) {
+    const where: any = {};
+
+    if (!includeAll) {
+      where.news = {
+        some: {
+          status: { in: ["PUBLISHED", "published", "Published"] },
+        },
+      };
+    }
 
     const categories = await prisma.newsCategory.findMany({
       where,
       include: {
         _count: {
           select: {
-            news: includeAll ? true : { where: { status: "PUBLISHED" } },
+            news: {
+              where: {
+                status: { in: ["PUBLISHED", "published", "Published"] },
+              },
+            },
           },
         },
       },

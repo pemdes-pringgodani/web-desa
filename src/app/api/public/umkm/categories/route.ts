@@ -2,10 +2,22 @@ import { UmkmService } from "../../../../../modules/umkm/umkm.service";
 import { ApiResponse } from "../../../../../shared/utils/response";
 import { AppError } from "../../../../../shared/errors/app-error";
 
-export async function GET() {
+export const dynamic = "force-dynamic";
+
+export async function GET(request: Request) {
   try {
-    const categories = await UmkmService.getCategories();
-    return ApiResponse.success(categories);
+    const { searchParams } = new URL(request.url);
+    const includeAll =
+      searchParams.get("all") === "true" ||
+      searchParams.get("includeAll") === "true";
+
+    const categories = await UmkmService.getCategories(includeAll);
+    const response = ApiResponse.success(categories);
+    response.headers.set(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, proxy-revalidate"
+    );
+    return response;
   } catch (error: any) {
     if (error instanceof AppError) {
       return ApiResponse.error(error.message, error.statusCode, error.errors);
