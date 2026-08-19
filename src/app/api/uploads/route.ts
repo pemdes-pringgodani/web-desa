@@ -2,6 +2,9 @@ import { StorageService } from "../../../modules/storage/storage.service";
 import { ApiResponse } from "../../../shared/utils/response";
 import { AppError } from "../../../shared/errors/app-error";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 export async function POST(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -21,6 +24,10 @@ export async function POST(request: Request) {
       return ApiResponse.error(error.message, error.statusCode, error.errors);
     }
     console.error("Upload API error:", error);
-    return ApiResponse.error("Terjadi kesalahan internal pada server", 500);
+    return ApiResponse.error(
+      error?.message || "Terjadi kesalahan saat mengunggah berkas",
+      500
+    );
   }
 }
+

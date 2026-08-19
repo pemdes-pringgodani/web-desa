@@ -8,7 +8,7 @@ export async function POST(request: Request) {
     const { user, session } = await AuthService.signIn(body);
 
     const serializedUser = encodeURIComponent(JSON.stringify({
-      name: user.user_metadata?.name || user.name || "Admin Desa",
+      name: user.user_metadata?.name || (user as any).name || "Admin Desa",
       email: user.email,
       role: "ADMIN",
     }));

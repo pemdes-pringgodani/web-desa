@@ -2,7 +2,6 @@ import { createAdminClient } from "../../shared/supabase/server";
 import { ValidationError, AppError } from "../../shared/errors/app-error";
 import fs from "fs";
 import path from "path";
-import sharp from "sharp";
 
 export class StorageService {
   static async uploadFile(file: File | null, category?: string) {
@@ -34,7 +33,10 @@ export class StorageService {
       targetBucket = process.env.SUPABASE_STORAGE_BUCKET_PROFILE || "village-profile";
     }
 
-    const storageProvider = process.env.STORAGE_PROVIDER || (process.env.NODE_ENV === "production" ? "supabase" : "local");
+    const isVercel = Boolean(process.env.VERCEL || process.env.NEXT_PUBLIC_VERCEL_ENV);
+    const storageProvider =
+      process.env.STORAGE_PROVIDER ||
+      (process.env.NODE_ENV === "production" || isVercel ? "supabase" : "local");
 
     const bytes = await file.arrayBuffer();
     let buffer = Buffer.from(bytes);
@@ -49,7 +51,8 @@ export class StorageService {
 
     if (!isAlreadyOptimized && file.type !== "image/gif") {
       try {
-        const image = sharp(buffer);
+        const sharpModule = await import("sharp").then((m) => m.default || m);
+        const image = sharpModule(buffer);
         const metadata = await image.metadata();
 
         const needsResize =
@@ -73,7 +76,7 @@ export class StorageService {
           `[StorageService] Berkas berhasil dioptimasi: ${(file.size / 1024).toFixed(1)} KB -> ${(buffer.length / 1024).toFixed(1)} KB (-${(((file.size - buffer.length) / file.size) * 100).toFixed(1)}%)`
         );
       } catch (err: any) {
-        console.warn("[StorageService] Sharp optimization fallback to original buffer:", err.message);
+        console.warn("[StorageService] Sharp optimization skipped (using original file):", err.message);
       }
     }
 
@@ -83,9 +86,9 @@ export class StorageService {
       .toLowerCase();
     const uniqueFileName = `${Date.now()}_${cleanFileName}.${finalExtension}`;
 
-    if (storageProvider === "local") {
+    if (storageProvider === "local" && !isVercel) {
       const uploadDir = path.join(process.cwd(), "public", "uploads", targetBucket);
-      
+
       if (!fs.existsSync(uploadDir)) {
         fs.mkdirSync(uploadDir, { recursive: true });
       }
@@ -97,15 +100,32 @@ export class StorageService {
       return { url: `${backendUrl}/uploads/${targetBucket}/${uniqueFileName}`, bucket: targetBucket };
     } else {
       const supabase = createAdminClient();
-      const { error } = await supabase.storage
+      let { error } = await supabase.storage
         .from(targetBucket)
         .upload(uniqueFileName, buffer, {
           contentType: finalContentType,
           upsert: true,
         });
 
+      // If bucket does not exist, attempt to auto-create public bucket and retry
+      if (error && (error.message.includes("Bucket not found") || error.message.includes("not found"))) {
+        console.log(`[StorageService] Bucket '${targetBucket}' belum ada, membuat bucket otomatis...`);
+        try {
+          await supabase.storage.createBucket(targetBucket, { public: true });
+          const retry = await supabase.storage
+            .from(targetBucket)
+            .upload(uniqueFileName, buffer, {
+              contentType: finalContentType,
+              upsert: true,
+            });
+          error = retry.error;
+        } catch (bucketErr: any) {
+          console.warn(`[StorageService] Gagal membuat bucket '${targetBucket}':`, bucketErr.message);
+        }
+      }
+
       if (error) {
-        throw new AppError(`Gagal mengunggah berkas ke bucket ${targetBucket}: ${error.message}`, 500);
+        throw new AppError(`Gagal mengunggah berkas ke Supabase Storage (bucket: ${targetBucket}): ${error.message}`, 500);
       }
 
       const { data: publicUrlData } = supabase.storage
