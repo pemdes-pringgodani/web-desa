@@ -134,6 +134,52 @@ export class ProductsRepository {
 
     if (!p) return null;
 
+    const otherRaw = await prisma.product.findMany({
+      where: {
+        umkmId: p.umkmId,
+        NOT: { id },
+        umkm: {
+          status: "APPROVED",
+        },
+      },
+      take: 6,
+      orderBy: { id: "desc" },
+      include: {
+        umkm: {
+          include: {
+            category: true,
+          },
+        },
+      },
+    });
+
+    const otherProducts = otherRaw.map((item) => ({
+      id: item.id.toString(),
+      name: item.name,
+      description: item.description,
+      price: item.price ? Number(item.price) : null,
+      imageUrl: item.imageUrl || "/images/placeholder-product.jpg",
+      umkmId: item.umkmId.toString(),
+      umkm: item.umkm
+        ? {
+            id: item.umkm.id.toString(),
+            name: item.umkm.name,
+            slug: item.umkm.slug,
+            ownerName: item.umkm.ownerName,
+            phone: item.umkm.phone,
+            address: item.umkm.address,
+            coverUrl: item.umkm.coverUrl || "/images/placeholder-umkm.jpg",
+            category: item.umkm.category
+              ? {
+                  id: item.umkm.category.id.toString(),
+                  name: item.umkm.category.name,
+                  slug: item.umkm.category.slug,
+                }
+              : undefined,
+          }
+        : undefined,
+    }));
+
     return {
       id: p.id.toString(),
       name: p.name,
@@ -163,6 +209,7 @@ export class ProductsRepository {
             category: "UMKM",
             categorySlug: "umkm",
           },
+      otherProducts,
     };
   }
 
