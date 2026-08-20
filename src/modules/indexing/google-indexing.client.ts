@@ -160,8 +160,9 @@ export class GoogleIndexingClient {
       };
     }
 
+    const creds = this.getCredentials();
     const token = await this.getAccessToken();
-    if (!token) {
+    if (!token || !creds) {
       return {
         url,
         type,
@@ -202,9 +203,31 @@ export class GoogleIndexingClient {
         };
       }
 
-      const errMsg =
+      let errMsg =
         responseBody?.error?.message ||
         `Google API error (HTTP ${response.status})`;
+
+      if (
+        response.status === 403 &&
+        (errMsg.includes("Permission denied") ||
+          errMsg.includes("verify the URL ownership") ||
+          errMsg.includes("ownership"))
+      ) {
+        errMsg =
+          "Izin Ditolak Google: Email Service Account (" +
+          (creds.clientEmail || "google-indexer@lokal-desa.iam.gserviceaccount.com") +
+          ") belum didaftarkan sebagai 'Owner' di Google Search Console untuk domain " +
+          new URL(url).origin +
+          ". Silakan tambahkan email tersebut di Search Console > Settings > Users and permissions.";
+      } else if (
+        errMsg.includes("Indexing API has not been used") ||
+        errMsg.includes("disabled")
+      ) {
+        errMsg =
+          "Google Indexing API belum diaktifkan di Google Cloud Console untuk project '" +
+          creds.projectId +
+          "'. Silakan aktifkan Indexing API di console.cloud.google.com.";
+      }
 
       console.warn(`[GoogleIndexing] Publish failed for ${url}: ${errMsg}`);
 
