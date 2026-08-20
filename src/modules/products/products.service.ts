@@ -2,6 +2,7 @@ import { ProductsRepository } from "./products.repository";
 import { FindAllProductsParams, CreateProductDTO, UpdateProductDTO, findAllProductsSchema, createProductSchema, updateProductSchema } from "./products.schema";
 import { NotFoundError, ValidationError } from "../../shared/errors/app-error";
 import { formatWhatsAppNumber, createWhatsAppLink } from "../../shared/utils/whatsapp";
+import { IndexingService } from "../indexing/indexing.service";
 
 export class ProductsService {
   static async getAllProducts(params: unknown) {
@@ -61,13 +62,19 @@ export class ProductsService {
       imageUrl: data.imageUrl,
     });
 
-    return {
+    const result = {
       id: created.id.toString(),
       name: created.name,
       description: created.description,
       price: created.price ? Number(created.price) : null,
       imageUrl: created.imageUrl,
     };
+
+    if (result.id) {
+      IndexingService.notifyProductUpdated(result.id);
+    }
+
+    return result;
   }
 
   static async updateProduct(idStr: string, input: unknown) {
@@ -84,13 +91,19 @@ export class ProductsService {
     }
 
     const updated = await ProductsRepository.updateProduct(id, validation.data);
-    return {
+    const result = {
       id: updated.id.toString(),
       name: updated.name,
       description: updated.description,
       price: updated.price ? Number(updated.price) : null,
       imageUrl: updated.imageUrl,
     };
+
+    if (result.id) {
+      IndexingService.notifyProductUpdated(result.id);
+    }
+
+    return result;
   }
 
   static async deleteProduct(idStr: string) {
@@ -102,6 +115,8 @@ export class ProductsService {
     }
 
     await ProductsRepository.deleteProduct(id);
+    IndexingService.notifyProductDeleted(idStr);
     return { success: true, message: "Produk berhasil dihapus" };
   }
 }
+

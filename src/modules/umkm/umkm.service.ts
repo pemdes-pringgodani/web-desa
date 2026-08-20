@@ -3,6 +3,7 @@ import { RegisterUmkmDTO, registerUmkmSchema } from "./umkm.schema";
 import { generateCategorySlug, generateUmkmSlug } from "../../shared/utils/slug";
 import { ValidationError, NotFoundError } from "../../shared/errors/app-error";
 import { prisma } from "../../shared/db/client";
+import { IndexingService } from "../indexing/indexing.service";
 
 // UMKM service for management and public discovery
 
@@ -148,6 +149,10 @@ export class UmkmService {
       return updated;
     });
 
+    if (result?.status === "APPROVED" && result?.slug) {
+      IndexingService.notifyUmkmUpdated(result.slug);
+    }
+
     return result;
   }
 
@@ -173,7 +178,17 @@ export class UmkmService {
     } catch {
       throw new NotFoundError("ID UMKM tidak valid");
     }
-    return UmkmRepository.deleteUmkm(id);
+
+    const existing = await prisma.umkm
+      .findUnique({ where: { id }, select: { slug: true } })
+      .catch(() => null);
+    const deleted = await UmkmRepository.deleteUmkm(id);
+
+    if (existing?.slug) {
+      IndexingService.notifyUmkmDeleted(existing.slug);
+    }
+
+    return deleted;
   }
 
   static async registerUmkm(data: any) {

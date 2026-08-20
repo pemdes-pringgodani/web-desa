@@ -3,6 +3,7 @@ import { CreateNewsDTO, UpdateNewsDTO, baseCreateNewsSchema, updateNewsSchema } 
 import { generateNewsTypeSlug, generateNewsSlug, generateNewsCategorySlug } from "../../shared/utils/slug";
 import { ValidationError, NotFoundError } from "../../shared/errors/app-error";
 import { prisma } from "../../shared/db/client";
+import { IndexingService } from "../indexing/indexing.service";
 
 export class NewsService {
   static async getCategories(includeAll = false) {
@@ -44,7 +45,15 @@ export class NewsService {
     } catch {
       throw new NotFoundError("ID berita tidak valid");
     }
-    return NewsRepository.deleteNews(id);
+
+    const existing = await NewsRepository.findById(idStr).catch(() => null);
+    const deleted = await NewsRepository.deleteNews(id);
+
+    if (existing?.slug) {
+      IndexingService.notifyNewsDeleted(existing.slug);
+    }
+
+    return deleted;
   }
 
   static async createNews(input: unknown) {
@@ -245,8 +254,13 @@ export class NewsService {
         id: news.id.toString(),
         slug: news.slug,
         title: news.title,
+        status: news.status,
       };
     });
+
+    if (result?.status === "PUBLISHED" && result?.slug) {
+      IndexingService.notifyNewsUpdated(result.slug);
+    }
 
     return result;
   }
@@ -378,8 +392,13 @@ export class NewsService {
         id: updated.id.toString(),
         slug: updated.slug,
         title: updated.title,
+        status: updated.status,
       };
     });
+
+    if (result?.status === "PUBLISHED" && result?.slug) {
+      IndexingService.notifyNewsUpdated(result.slug);
+    }
 
     return result;
   }

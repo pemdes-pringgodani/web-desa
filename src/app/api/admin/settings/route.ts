@@ -2,6 +2,7 @@ import { SettingsRepository } from "../../../../modules/settings/settings.reposi
 import { ApiResponse } from "../../../../shared/utils/response";
 import { requireAdmin } from "../../../../shared/auth/require-admin";
 import { StorageService } from "../../../../modules/storage/storage.service";
+import { IndexingService } from "../../../../modules/indexing/indexing.service";
 
 export async function GET() {
   try {
@@ -80,6 +81,9 @@ export async function PUT(request: Request) {
       social_tiktok: updated?.tiktok || "",
       jumlah_dusun: 4,
     };
+    // Trigger auto-indexing for site-wide pages
+    IndexingService.notifySiteUpdated();
+
     return ApiResponse.success(data, "Pengaturan website berhasil diperbarui");
   } catch (error: any) {
     console.error("Update admin settings error:", error);
