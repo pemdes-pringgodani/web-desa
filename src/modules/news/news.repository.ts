@@ -77,10 +77,20 @@ export class NewsRepository {
     });
   }
 
-  static async createCategory(data: { name: string; slug?: string; description?: string }, tx?: any) {
+  static async createCategory(
+    data: { name: string; slug?: string; description?: string | null },
+    tx?: any
+  ) {
     const client = tx || prisma;
-    const slug = data.slug || data.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-    return client.newsCategory.create({ data: { ...data, slug } });
+    const slug =
+      data.slug || data.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    return client.newsCategory.create({
+      data: {
+        name: data.name,
+        slug,
+        description: data.description ?? null,
+      },
+    });
   }
 
   static async findTypeByName(name: string, tx?: any) {

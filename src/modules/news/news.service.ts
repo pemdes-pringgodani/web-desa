@@ -11,6 +11,34 @@ export class NewsService {
     return { items: categories };
   }
 
+  static async createCategory(data: { name: string; description?: string }) {
+    if (!data.name || !data.name.trim()) {
+      throw new ValidationError("Nama kategori berita wajib diisi");
+    }
+    const cleanName = data.name.trim();
+    const existing = await NewsRepository.findCategoryByName(cleanName);
+    if (existing) {
+      return {
+        id: existing.id.toString(),
+        name: existing.name,
+        slug: existing.slug,
+        description: existing.description,
+      };
+    }
+    const slug = await generateNewsCategorySlug(cleanName);
+    const created = await NewsRepository.createCategory({
+      name: cleanName,
+      slug,
+      description: data.description?.trim() || null,
+    });
+    return {
+      id: created.id.toString(),
+      name: created.name,
+      slug: created.slug,
+      description: created.description,
+    };
+  }
+
   static async getTypes() {
     return NewsRepository.findAllTypes();
   }
@@ -300,8 +328,36 @@ export class NewsService {
         }
       }
       if (payload.publishedAt) updateData.publishedAt = payload.publishedAt;
-      if (payload.newsCategoryId && !isNaN(Number(payload.newsCategoryId))) {
-        updateData.newsCategoryId = BigInt(payload.newsCategoryId);
+      if (payload.newsCategoryId === "other" && payload.newCategoryName && payload.newCategoryName.trim()) {
+        const cleanedCatName = payload.newCategoryName.trim();
+        const existingCat = await NewsRepository.findCategoryByName(cleanedCatName, tx);
+        if (existingCat) {
+          updateData.newsCategoryId = existingCat.id;
+        } else {
+          const catSlug = await generateNewsCategorySlug(cleanedCatName, tx);
+          const newCat = await NewsRepository.createCategory(
+            { name: cleanedCatName, slug: catSlug },
+            tx
+          );
+          updateData.newsCategoryId = newCat.id;
+        }
+      } else if (payload.newsCategoryId && payload.newsCategoryId !== "other") {
+        if (!isNaN(Number(payload.newsCategoryId))) {
+          updateData.newsCategoryId = BigInt(payload.newsCategoryId);
+        } else {
+          const searchSlug = payload.newsCategoryId.toLowerCase().trim();
+          let cat = await tx.newsCategory.findFirst({
+            where: {
+              OR: [
+                { slug: searchSlug },
+                { name: { equals: payload.newsCategoryId.trim(), mode: "insensitive" } },
+              ],
+            },
+          });
+          if (cat) {
+            updateData.newsCategoryId = cat.id;
+          }
+        }
       }
       if (payload.newsTypeId && !isNaN(Number(payload.newsTypeId))) {
         updateData.newsTypeId = BigInt(payload.newsTypeId);

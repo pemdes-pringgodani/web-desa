@@ -319,9 +319,20 @@ export class UmkmRepository {
     });
   }
 
-  static async createCategory(data: { name: string; slug: string }, tx?: any) {
+  static async createCategory(
+    data: { name: string; slug?: string; description?: string | null },
+    tx?: any
+  ) {
     const client = tx || prisma;
-    return client.umkmCategory.create({ data });
+    const slug =
+      data.slug || data.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    return client.umkmCategory.create({
+      data: {
+        name: data.name,
+        slug,
+        description: data.description ?? null,
+      },
+    });
   }
 
   static async executeTransaction<T>(fn: (tx: any) => Promise<T>): Promise<T> {

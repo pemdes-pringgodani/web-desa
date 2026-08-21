@@ -13,6 +13,34 @@ export class UmkmService {
     return { items: categories };
   }
 
+  static async createCategory(data: { name: string; description?: string }) {
+    if (!data.name || !data.name.trim()) {
+      throw new ValidationError("Nama kategori UMKM wajib diisi");
+    }
+    const cleanName = data.name.trim();
+    const existing = await UmkmRepository.findCategoryByName(cleanName);
+    if (existing) {
+      return {
+        id: existing.id.toString(),
+        name: existing.name,
+        slug: existing.slug,
+        description: existing.description,
+      };
+    }
+    const slug = await generateCategorySlug(cleanName);
+    const created = await UmkmRepository.createCategory({
+      name: cleanName,
+      slug,
+      description: data.description?.trim() || null,
+    });
+    return {
+      id: created.id.toString(),
+      name: created.name,
+      slug: created.slug,
+      description: created.description,
+    };
+  }
+
   static async getUmkmById(idStr: string) {
     let id: bigint;
     try {
@@ -84,9 +112,58 @@ export class UmkmService {
         throw new NotFoundError(`UMKM dengan ID '${idStr}' tidak ditemukan`);
       }
 
+      let umkmCategoryId = existing.umkmCategoryId;
+      if (input.newCategoryName && input.newCategoryName.trim()) {
+        const catName = input.newCategoryName.trim();
+        const existingCat = await UmkmRepository.findCategoryByName(catName, tx);
+        if (existingCat) {
+          umkmCategoryId = existingCat.id;
+        } else {
+          const catSlug = await generateCategorySlug(catName, tx);
+          const newCat = await UmkmRepository.createCategory(
+            { name: catName, slug: catSlug },
+            tx
+          );
+          umkmCategoryId = newCat.id;
+        }
+      } else if (input.umkmCategoryId && input.umkmCategoryId !== "other") {
+        if (!isNaN(Number(input.umkmCategoryId))) {
+          const parsedId = BigInt(input.umkmCategoryId);
+          const found = await tx.umkmCategory.findUnique({ where: { id: parsedId } });
+          if (found) {
+            umkmCategoryId = found.id;
+          }
+        } else {
+          const foundBySlugOrName = await tx.umkmCategory.findFirst({
+            where: {
+              OR: [
+                { slug: input.umkmCategoryId },
+                { name: { equals: input.umkmCategoryId, mode: "insensitive" } },
+              ],
+            },
+          });
+          if (foundBySlugOrName) {
+            umkmCategoryId = foundBySlugOrName.id;
+          }
+        }
+      } else if (input.categoryName && typeof input.categoryName === "string" && input.categoryName.trim()) {
+        const foundByName = await tx.umkmCategory.findFirst({
+          where: {
+            OR: [
+              { name: { equals: input.categoryName.trim(), mode: "insensitive" } },
+              { slug: input.categoryName.trim() },
+            ],
+          },
+        });
+        if (foundByName) {
+          umkmCategoryId = foundByName.id;
+        }
+      }
+
       const updated = await tx.umkm.update({
         where: { id },
         data: {
+          umkmCategoryId,
           name: input.name ?? existing.name,
           ownerName: input.ownerName ?? existing.ownerName,
           description: input.description ?? existing.description,
@@ -201,15 +278,18 @@ export class UmkmService {
 
       if (data.newCategoryName && data.newCategoryName.trim()) {
         const catName = data.newCategoryName.trim();
-        const catSlug = await generateCategorySlug(catName, tx);
-        const newCat = await tx.umkmCategory.create({
-          data: {
-            name: catName,
-            slug: catSlug,
-          },
-        });
-        finalCategoryId = newCat.id;
-      } else if (data.umkmCategoryId) {
+        const existingCat = await UmkmRepository.findCategoryByName(catName, tx);
+        if (existingCat) {
+          finalCategoryId = existingCat.id;
+        } else {
+          const catSlug = await generateCategorySlug(catName, tx);
+          const newCat = await UmkmRepository.createCategory(
+            { name: catName, slug: catSlug },
+            tx
+          );
+          finalCategoryId = newCat.id;
+        }
+      } else if (data.umkmCategoryId && data.umkmCategoryId !== "other") {
         try {
           const parsedId = BigInt(data.umkmCategoryId);
           const found = await tx.umkmCategory.findUnique({ where: { id: parsedId } });
@@ -236,6 +316,22 @@ export class UmkmService {
             if (!defaultCat) throw new NotFoundError("Kategori tidak valid");
             finalCategoryId = defaultCat.id;
           }
+        }
+      } else if (data.categoryName && typeof data.categoryName === "string" && data.categoryName.trim()) {
+        const foundByName = await tx.umkmCategory.findFirst({
+          where: {
+            OR: [
+              { name: { equals: data.categoryName.trim(), mode: "insensitive" } },
+              { slug: data.categoryName.trim() },
+            ],
+          },
+        });
+        if (foundByName) {
+          finalCategoryId = foundByName.id;
+        } else {
+          const defaultCat = await tx.umkmCategory.findFirst();
+          if (!defaultCat) throw new NotFoundError("Kategori tidak valid");
+          finalCategoryId = defaultCat.id;
         }
       } else {
         const defaultCat = await tx.umkmCategory.findFirst();
