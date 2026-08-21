@@ -8,6 +8,16 @@
 
 ---
 
+## 📚 [DOKUMENTASI TEKNIS LENGKAP]
+Panduan teknis dan operasional backend terperinci tersedia di folder [`docs/`](./docs/):
+* 🏛️ [**01. Arsitektur Backend & Keamanan**](./docs/01-backend-architecture.md) — Pola Clean Architecture, Route Handlers, Service, & RBAC.
+* 🗄️ [**02. Basis Data & Prisma ORM**](./docs/02-database-and-prisma.md) — Skema PostgreSQL, Diagram ERD Mermaid, Migrasi, & Seed.
+* 🌐 [**03. Spesifikasi REST API**](./docs/03-api-reference.md) — Daftar lengkap Endpoint Public & Admin.
+* 💻 [**04. Panduan Setup Lokal & Variabel .env**](./docs/04-local-setup-and-env.md) — Cara menjalankan di komputer lokal & troubleshooting.
+* 🚀 [**05. Panduan Deployment & Supabase**](./docs/05-deployment-and-supabase.md) — Konfigurasi Vercel Serverless & Supabase Cloud.
+
+---
+
 ## 📋 [PROJECT INFO]
 * **Project Name**: `web-desa`
 * **One Line Description**: Backend RESTful API modern, serverless, dan berkinerja tinggi berbasis Next.js App Router, Prisma ORM, dan Supabase PostgreSQL untuk pengelolaan data publik desa, katalog UMKM, produk unggulan, berita warga, peta interaktif, serta profil pemerintahan Desa Pringgodani.
